@@ -37,3 +37,9 @@ END
 $$;
 
 GRANT ALL ON public.transaction_contributors TO anon, authenticated, service_role;
+
+-- Deduplicate staff_members (keep one row per name)
+DELETE FROM public.staff_members
+WHERE id NOT IN (
+  SELECT MIN(id::text)::uuid FROM public.staff_members GROUP BY name
+);

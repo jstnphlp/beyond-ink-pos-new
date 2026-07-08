@@ -226,6 +226,7 @@ model StaffMember {
 
   sessions StaffSession[]
   contributors TransactionContributor[]
+  distributionPayouts DistributionPayout[]
 
   @@map("staff_members")
 }
@@ -259,4 +260,25 @@ model TransactionContributor {
   @@index([transactionId])
   @@index([staffMemberId])
   @@map("transaction_contributors")
+}
+
+model DistributionPayout {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  staffMemberId  String    @map("staff_member_id") @db.Uuid
+  staffName      String    @map("staff_name") @db.Text
+  department     String    @db.Text
+  periodFrom     DateTime  @map("period_from") @db.Timestamptz
+  periodTo       DateTime  @map("period_to") @db.Timestamptz
+  amount         Decimal   @db.Decimal(10, 2)
+  given          Boolean   @default(false)
+  givenAt        DateTime? @map("given_at") @db.Timestamptz
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  staffMember StaffMember @relation(fields: [staffMemberId], references: [id])
+
+  @@unique([staffMemberId, department, periodFrom, periodTo])
+  @@index([staffMemberId])
+  @@index([periodFrom, periodTo])
+  @@index([department])
+  @@map("distribution_payouts")
 }

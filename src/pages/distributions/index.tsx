@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChartPie, DollarSign, Clock, Users, TrendingUp } from 'lucide-react'
+import { ChartPie, DollarSign, Clock, Users, TrendingUp, CheckCircle2, Circle } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
@@ -7,6 +7,7 @@ import {
   usePhysicalDistribution,
   useDesignDistribution,
   useDevDistribution,
+  useMarkPayoutGiven,
 } from '@/shared/hooks/use-distributions'
 import type {
   DistributionPeriod,
@@ -146,10 +147,14 @@ function DesignDevSummaryCards({
 function PhysicalStaffTable({
   isLoading,
   payouts,
+  period,
 }: {
   isLoading: boolean
   payouts: PhysicalStaffPayout[]
+  period: DistributionPeriod
 }) {
+  const markGiven = useMarkPayoutGiven(period)
+
   if (isLoading) {
     return (
       <div className="space-y-2">
@@ -167,6 +172,21 @@ function PhysicalStaffTable({
     )
   }
 
+  const periodFrom = period.dateFrom ?? '1970-01-01T00:00:00.000Z'
+  const periodTo = period.dateTo ? `${period.dateTo}T23:59:59.999Z` : '2099-12-31T23:59:59.999Z'
+
+  function handleToggle(p: PhysicalStaffPayout) {
+    markGiven.mutate({
+      staffMemberId: p.staffMemberId,
+      staffName: p.staffName,
+      department: 'physical_dept',
+      periodFrom,
+      periodTo,
+      amount: p.payout,
+      given: !p.given,
+    })
+  }
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
@@ -174,18 +194,33 @@ function PhysicalStaffTable({
           <tr className="border-b border-border/50 text-left text-xs text-muted-foreground">
             <th className="pb-2 pr-4 font-medium">Staff</th>
             <th className="pb-2 pr-4 font-medium text-right">Hours</th>
-            <th className="pb-2 font-medium text-right">Payout</th>
+            <th className="pb-2 pr-4 font-medium text-right">Payout</th>
+            <th className="pb-2 font-medium text-center">Given</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-border/30">
           {payouts.map((p) => (
-            <tr key={p.staffMemberId}>
+            <tr key={p.staffMemberId} className={p.given ? 'bg-emerald-500/5' : undefined}>
               <td className="py-2.5 pr-4 font-medium">{p.staffName}</td>
               <td className="py-2.5 pr-4 text-right tabular-nums">
                 {p.totalHours.toFixed(1)}h
               </td>
-              <td className="py-2.5 text-right font-semibold tabular-nums">
+              <td className="py-2.5 pr-4 text-right font-semibold tabular-nums">
                 {formatCurrency(p.payout)}
+              </td>
+              <td className="py-2.5 text-center">
+                <button
+                  type="button"
+                  onClick={() => handleToggle(p)}
+                  disabled={markGiven.isPending}
+                  className="inline-flex items-center justify-center transition-colors"
+                >
+                  {p.given ? (
+                    <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+                  ) : (
+                    <Circle className="h-5 w-5 text-muted-foreground/40 hover:text-muted-foreground" />
+                  )}
+                </button>
               </td>
             </tr>
           ))}
@@ -198,10 +233,16 @@ function PhysicalStaffTable({
 function DesignDevStaffTable({
   isLoading,
   payouts,
+  department,
+  period,
 }: {
   isLoading: boolean
   payouts: DesignDevStaffPayout[]
+  department: 'design_dept' | 'dev_dept'
+  period: DistributionPeriod
 }) {
+  const markGiven = useMarkPayoutGiven(period)
+
   if (isLoading) {
     return (
       <div className="space-y-2">
@@ -219,6 +260,21 @@ function DesignDevStaffTable({
     )
   }
 
+  const periodFrom = period.dateFrom ?? '1970-01-01T00:00:00.000Z'
+  const periodTo = period.dateTo ? `${period.dateTo}T23:59:59.999Z` : '2099-12-31T23:59:59.999Z'
+
+  function handleToggle(p: DesignDevStaffPayout) {
+    markGiven.mutate({
+      staffMemberId: p.staffMemberId,
+      staffName: p.staffName,
+      department,
+      periodFrom,
+      periodTo,
+      amount: p.payout,
+      given: !p.given,
+    })
+  }
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
@@ -227,12 +283,13 @@ function DesignDevStaffTable({
             <th className="pb-2 pr-4 font-medium">Staff</th>
             <th className="pb-2 pr-4 font-medium text-right">Transactions</th>
             <th className="pb-2 pr-4 font-medium text-right">Share %</th>
-            <th className="pb-2 font-medium text-right">Payout</th>
+            <th className="pb-2 pr-4 font-medium text-right">Payout</th>
+            <th className="pb-2 font-medium text-center">Given</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-border/30">
           {payouts.map((p) => (
-            <tr key={p.staffMemberId}>
+            <tr key={p.staffMemberId} className={p.given ? 'bg-emerald-500/5' : undefined}>
               <td className="py-2.5 pr-4 font-medium">{p.staffName}</td>
               <td className="py-2.5 pr-4 text-right tabular-nums">
                 {p.transactionCount}
@@ -240,8 +297,22 @@ function DesignDevStaffTable({
               <td className="py-2.5 pr-4 text-right tabular-nums">
                 {p.sharePercent.toFixed(1)}%
               </td>
-              <td className="py-2.5 text-right font-semibold tabular-nums">
+              <td className="py-2.5 pr-4 text-right font-semibold tabular-nums">
                 {formatCurrency(p.payout)}
+              </td>
+              <td className="py-2.5 text-center">
+                <button
+                  type="button"
+                  onClick={() => handleToggle(p)}
+                  disabled={markGiven.isPending}
+                  className="inline-flex items-center justify-center transition-colors"
+                >
+                  {p.given ? (
+                    <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+                  ) : (
+                    <Circle className="h-5 w-5 text-muted-foreground/40 hover:text-muted-foreground" />
+                  )}
+                </button>
               </td>
             </tr>
           ))}
@@ -274,7 +345,7 @@ function PhysicalPanel({ period }: { period: DistributionPeriod }) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <PhysicalStaffTable isLoading={isLoading} payouts={payouts} />
+          <PhysicalStaffTable isLoading={isLoading} payouts={payouts} period={period} />
         </CardContent>
       </Card>
     </div>
@@ -302,7 +373,7 @@ function DesignPanel({ period }: { period: DistributionPeriod }) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <DesignDevStaffTable isLoading={isLoading} payouts={payouts} />
+          <DesignDevStaffTable isLoading={isLoading} payouts={payouts} department="design_dept" period={period} />
         </CardContent>
       </Card>
     </div>
@@ -330,7 +401,7 @@ function DevPanel({ period }: { period: DistributionPeriod }) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <DesignDevStaffTable isLoading={isLoading} payouts={payouts} />
+          <DesignDevStaffTable isLoading={isLoading} payouts={payouts} department="dev_dept" period={period} />
         </CardContent>
       </Card>
     </div>

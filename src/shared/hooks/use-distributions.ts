@@ -1,7 +1,9 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import {
   getPhysicalDistribution,
   getDesignDevDistribution,
+  upsertPayoutGiven,
 } from '@/shared/api/distributions'
 import type { DistributionPeriod } from '@/shared/api/distributions.types'
 
@@ -36,5 +38,21 @@ export function useDevDistribution(period: DistributionPeriod) {
     queryKey: distributionKeys.dev(period),
     queryFn: () => getDesignDevDistribution('dev_dept', period),
     staleTime: 5 * 60_000,
+  })
+}
+
+export function useMarkPayoutGiven(period: DistributionPeriod) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: upsertPayoutGiven,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: distributionKeys.physical(period) })
+      queryClient.invalidateQueries({ queryKey: distributionKeys.design(period) })
+      queryClient.invalidateQueries({ queryKey: distributionKeys.dev(period) })
+    },
+    onError: () => {
+      toast.error('Failed to update payout status')
+    },
   })
 }

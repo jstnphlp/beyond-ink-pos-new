@@ -13,9 +13,33 @@ function calcHours(timeIn: string, timeOut: string): number {
   return Math.round((ms / (1000 * 60 * 60)) * 100) / 100
 }
 
+async function getPayoutStatuses(
+  department: string,
+  periodFrom: string,
+  periodTo: string,
+): Promise<Map<string, { given: boolean; payoutId: string }>> {
+  const { data, error } = await supabase
+    .from('distribution_payouts')
+    .select('id, staff_member_id, given')
+    .eq('department', department)
+    .eq('period_from', periodFrom)
+    .eq('period_to', periodTo)
+
+  if (error) throw error
+
+  const map = new Map<string, { given: boolean; payoutId: string }>()
+  for (const row of data ?? []) {
+    map.set(row.staff_member_id, { given: row.given, payoutId: row.id })
+  }
+  return map
+}
+
 export async function getPhysicalDistribution(
   period: DistributionPeriod,
 ): Promise<DepartmentDistribution> {
+  const periodFrom = period.dateFrom ?? '1970-01-01T00:00:00.000Z'
+  const periodTo = period.dateTo ? `${period.dateTo}T23:59:59.999Z` : '2099-12-31T23:59:59.999Z'
+
   let query = supabase
     .from('staff_sessions')
     .select('staff_member_id, staff_name, time_in, time_out')
@@ -49,13 +73,20 @@ export async function getPhysicalDistribution(
     }
   }
 
+  const statusMap = await getPayoutStatuses('physical_dept', periodFrom, periodTo)
+
   const payouts: PhysicalStaffPayout[] = Array.from(hoursMap.entries()).map(
-    ([staffMemberId, { name, hours }]) => ({
-      staffMemberId,
-      staffName: name,
-      totalHours: Math.round(hours * 100) / 100,
-      payout: Math.round(hours * HOURLY_RATE * 100) / 100,
-    }),
+    ([staffMemberId, { name, hours }]) => {
+      const status = statusMap.get(staffMemberId)
+      return {
+        staffMemberId,
+        staffName: name,
+        totalHours: Math.round(hours * 100) / 100,
+        payout: Math.round(hours * HOURLY_RATE * 100) / 100,
+        given: status?.given ?? false,
+        payoutId: status?.payoutId ?? null,
+      }
+    },
   )
 
   const totalPayroll = payouts.reduce((sum, p) => sum + p.payout, 0)
@@ -74,6 +105,9 @@ export async function getDesignDevDistribution(
   department: 'design_dept' | 'dev_dept',
   period: DistributionPeriod,
 ): Promise<DepartmentDistribution> {
+  const periodFrom = period.dateFrom ?? '1970-01-01T00:00:00.000Z'
+  const periodTo = period.dateTo ? `${period.dateTo}T23:59:59.999Z` : '2099-12-31T23:59:59.999Z'
+
   let txnQuery = supabase
     .from('sales_transactions')
     .select('id, final_total')
@@ -127,6 +161,8 @@ export async function getDesignDevDistribution(
 
     const deptShare = Math.round(totalRevenue * 0.68 * 100) / 100
 
+    const statusMap = await getPayoutStatuses(department, periodFrom, periodTo)
+
     payouts = Array.from(staffTxnMap.entries()).map(
       ([staffMemberId, { name, txnIds }]) => {
         const transactionCount = txnIds.size
@@ -138,12 +174,15 @@ export async function getDesignDevDistribution(
           totalContributions > 0
             ? Math.round((deptShare * transactionCount) / totalContributions * 100) / 100
             : 0
+        const status = statusMap.get(staffMemberId)
         return {
           staffMemberId,
           staffName: name,
           transactionCount,
           sharePercent,
           payout,
+          given: status?.given ?? false,
+          payoutId: status?.payoutId ?? null,
         }
       },
     )
@@ -156,6 +195,54 @@ export async function getDesignDevDistribution(
     deptShare: Math.round(totalRevenue * 0.68 * 100) / 100,
     reinvestment: Math.round(totalRevenue * 0.14 * 100) / 100,
     staffPayouts: payouts,
+  }
+}
+
+export async function upsertPayoutGiven(params: {
+  staffMemberId: string
+  staffName: string
+  department: string
+  periodFrom: string
+  periodTo: string
+  amount: number
+  given: boolean
+}): Promise<void> {
+  const { staffMemberId, staffName, department, periodFrom, periodTo, amount, given } = params
+
+  const { data: existing } = await supabase
+    .from('distribution_payouts')
+    .select('id')
+    .eq('staff_member_id', staffMemberId)
+    .eq('department', department)
+    .eq('period_from', periodFrom)
+    .eq('period_to', periodTo)
+    .maybeSingle()
+
+  if (existing) {
+    const { error } = await supabase
+      .from('distribution_payouts')
+      .update({
+        given,
+        given_at: given ? new Date().toISOString() : null,
+        amount,
+        staff_name: staffName,
+      })
+      .eq('id', existing.id)
+    if (error) throw error
+  } else {
+    const { error } = await supabase
+      .from('distribution_payouts')
+      .insert({
+        staff_member_id: staffMemberId,
+        staff_name: staffName,
+        department,
+        period_from: periodFrom,
+        period_to: periodTo,
+        amount,
+        given,
+        given_at: given ? new Date().toISOString() : null,
+      })
+    if (error) throw error
   }
 }
 
