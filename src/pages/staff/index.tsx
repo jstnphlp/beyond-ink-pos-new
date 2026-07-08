@@ -14,17 +14,13 @@ import {
   DialogClose,
 } from '@/components/ui/dialog'
 import {
+  useStaffMembers,
   useActiveSessions,
   useAttendance,
   useClockIn,
   useClockOut,
 } from '@/shared/hooks/use-staff'
 import { useStaffStore } from '@/stores/staff-store'
-
-const STAFF_LIST = [
-  { id: 'staff-mark', name: 'Mark' },
-  { id: 'staff-buknoy', name: 'Buknoy' },
-]
 
 function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString('en-US', {
@@ -69,16 +65,17 @@ function getDefaultDateTo(): string {
 // ─── Clock-In Dialog ─────────────────────────────────────────────────────────
 
 function ClockInDialog() {
+  const { data: members } = useStaffMembers()
   const { data: activeSessions } = useActiveSessions()
   const clockInMutation = useClockIn()
   const [open, setOpen] = useState(false)
 
   const activeIds = new Set((activeSessions ?? []).map((s) => s.staffMemberId))
-  const available = STAFF_LIST.filter((s) => !activeIds.has(s.id))
+  const available = (members ?? []).filter((m) => !activeIds.has(m.id))
 
-  function handleClockIn(staff: { id: string; name: string }) {
+  function handleClockIn(member: { id: string; name: string }) {
     clockInMutation.mutate(
-      { staffMemberId: staff.id, staffName: staff.name },
+      { staffMemberId: member.id, staffName: member.name },
       { onSuccess: () => setOpen(false) },
     )
   }
@@ -100,24 +97,24 @@ function ClockInDialog() {
         <div className="mt-4 space-y-2">
           {available.length === 0 && (
             <p className="py-4 text-center text-sm text-muted-foreground">
-              Both staff are already clocked in.
+              Everyone is already clocked in.
             </p>
           )}
-          {available.map((staff) => (
+          {available.map((member) => (
             <button
-              key={staff.id}
+              key={member.id}
               type="button"
               className="flex w-full items-center gap-3 rounded-lg border border-border p-3 text-left transition-colors hover:bg-muted/50 disabled:opacity-50"
               disabled={clockInMutation.isPending}
-              onClick={() => handleClockIn(staff)}
+              onClick={() => handleClockIn(member)}
             >
               <Avatar className="h-8 w-8 border border-border">
                 <AvatarFallback className="bg-muted text-xs font-semibold">
-                  {getInitials(staff.name)}
+                  {getInitials(member.name)}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1">
-                <p className="text-sm font-medium">{staff.name}</p>
+                <p className="text-sm font-medium">{member.name}</p>
               </div>
               <LogIn className="h-4 w-4 text-emerald-400" />
             </button>
@@ -207,6 +204,7 @@ function ActiveSessionsPanel() {
 
 function AttendanceLog() {
   const { attendanceFilters, setAttendanceFilters } = useStaffStore()
+  const { data: members } = useStaffMembers()
   const [dateFrom, setDateFrom] = useState(getDefaultDateFrom)
   const [dateTo, setDateTo] = useState(getDefaultDateTo)
   const [staffFilter, setStaffFilter] = useState<string>('all')
@@ -272,7 +270,7 @@ function AttendanceLog() {
               className="h-8 rounded-lg border border-border bg-background px-2.5 text-sm"
             >
               <option value="all">All Staff</option>
-              {STAFF_LIST.map((m) => (
+              {(members ?? []).map((m) => (
                 <option key={m.id} value={m.id}>
                   {m.name}
                 </option>
