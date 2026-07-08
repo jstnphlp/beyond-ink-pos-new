@@ -6,7 +6,7 @@ import type {
   AttendancePageResult,
 } from './staff.types'
 
-const PAGE_SIZE = 20
+const PAGE_SIZE = 10
 
 let staleCleanupDone = false
 

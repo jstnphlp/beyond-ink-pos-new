@@ -16,7 +16,7 @@ import {
 import {
   useStaffMembers,
   useActiveSessions,
-  useAttendance,
+  useAttendanceInfinite,
   useClockIn,
   useClockOut,
 } from '@/shared/hooks/use-staff'
@@ -283,7 +283,8 @@ function AttendanceLog() {
   const [staffFilter, setStaffFilter] = useState<string>('all')
   const [appliedFilters, setAppliedFilters] = useState(attendanceFilters)
 
-  const { data, isLoading, isFetching } = useAttendance(appliedFilters)
+  const { data, isLoading, isFetching, fetchNextPage, hasNextPage, isFetchingNextPage } =
+    useAttendanceInfinite(appliedFilters)
 
   function handleFilter() {
     const filters = {
@@ -295,7 +296,7 @@ function AttendanceLog() {
     setAppliedFilters(filters)
   }
 
-  const sessions = data?.sessions ?? []
+  const sessions = data?.pages.flatMap((page) => page.sessions) ?? []
 
   // Summary hours
   const hoursByName: Record<string, number> = {}
@@ -432,21 +433,22 @@ function AttendanceLog() {
           </div>
         )}
 
-        {/* Load More */}
-        {data?.nextCursor && (
-          <div className="mt-4 text-center">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setAppliedFilters((prev) => ({
-                  ...prev,
-                  _cursor: data.nextCursor,
-                }))
-              }}
-            >
-              Load More
-            </Button>
+        {/* Show More */}
+        {!isLoading && sessions.length > 0 && (
+          <div className="mt-4 flex items-center justify-between border-t border-border/40 pt-4">
+            <p className="text-xs text-muted-foreground">
+              Showing {sessions.length} record{sessions.length !== 1 ? 's' : ''}
+            </p>
+            {hasNextPage && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => fetchNextPage()}
+                disabled={isFetchingNextPage}
+              >
+                {isFetchingNextPage ? 'Loading...' : 'Show More'}
+              </Button>
+            )}
           </div>
         )}
       </CardContent>

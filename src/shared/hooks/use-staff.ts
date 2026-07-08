@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import {
   getStaffMembers,
@@ -45,6 +45,17 @@ export function useAttendance(filters: AttendanceFilters) {
     staleTime: 5 * 60_000,
     gcTime: 30 * 60_000,
     placeholderData: keepPreviousData,
+  })
+}
+
+export function useAttendanceInfinite(filters: AttendanceFilters) {
+  return useInfiniteQuery({
+    queryKey: staffKeys.attendance(filters),
+    queryFn: ({ pageParam }) => getAttendance(filters, pageParam),
+    initialPageParam: null as { timeIn: string; id: string } | null,
+    getNextPageParam: (lastPage) => lastPage.nextCursor,
+    staleTime: 5 * 60_000,
+    gcTime: 30 * 60_000,
   })
 }
 
