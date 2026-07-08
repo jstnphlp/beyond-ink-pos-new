@@ -1,7 +1,7 @@
 import { usePosStore } from '@/stores/pos-store'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
-import { Banknote, Smartphone, ArrowDownLeft, Hash } from 'lucide-react'
+import { Banknote, Smartphone, ArrowDownLeft } from 'lucide-react'
 
 export function StepPayment() {
   const {
@@ -9,8 +9,6 @@ export function StepPayment() {
     setPaymentMethod,
     cashReceived,
     setCashReceived,
-    gcashRef,
-    setGcashRef,
     getTotal,
     getChangeDue,
   } = usePosStore()
@@ -164,21 +162,17 @@ export function StepPayment() {
         </div>
       )}
 
-      {/* GCash Reference */}
+      {/* GCash confirmation */}
       {paymentMethod === 'gcash' && (
         <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-          <div className="rounded-xl border border-border/60 bg-card p-5">
-            <label className="mb-2 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-              <Hash className="h-3 w-3" />
-              GCash Reference Number
-            </label>
-            <Input
-              placeholder="Enter reference number"
-              value={gcashRef}
-              onChange={(e) => setGcashRef(e.target.value)}
-              className="h-12 text-base font-semibold tracking-wider"
-              autoFocus
-            />
+          <div className="rounded-xl border border-blue-500/30 bg-blue-500/5 p-5 text-center">
+            <Smartphone className="mx-auto h-6 w-6 text-blue-400" />
+            <p className="mt-2 text-sm font-medium text-foreground">
+              GCash Payment — ₱{total.toLocaleString()}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Confirm the payment has been received before completing.
+            </p>
           </div>
         </div>
       )}

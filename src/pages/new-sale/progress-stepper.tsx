@@ -12,22 +12,29 @@ const STEPS = [
 
 export function ProgressStepper() {
   const currentStep = usePosStore((s) => s.currentStep)
+  const setStep = usePosStore((s) => s.setStep)
 
   return (
     <div className="flex items-center gap-1">
       {STEPS.map((step, idx) => {
         const isActive = step.number === currentStep
         const isCompleted = step.number < currentStep
+        const isClickable = isCompleted || isActive
 
         return (
           <div key={step.number} className="flex items-center gap-1 flex-1">
             {/* Step indicator */}
             <div className="flex items-center gap-2.5 min-w-0">
-              <div
+              <button
+                type="button"
+                disabled={!isClickable}
+                onClick={() => setStep(step.number)}
                 className={cn(
                   'flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-all duration-300',
+                  isClickable && 'cursor-pointer',
+                  !isClickable && 'cursor-default',
                   isCompleted &&
-                    'bg-brand text-brand-foreground',
+                    'bg-brand text-brand-foreground hover:opacity-80',
                   isActive &&
                     'bg-foreground text-background ring-4 ring-foreground/10',
                   !isActive &&
@@ -40,7 +47,7 @@ export function ProgressStepper() {
                 ) : (
                   step.number
                 )}
-              </div>
+              </button>
               <span
                 className={cn(
                   'text-xs font-medium truncate transition-colors',

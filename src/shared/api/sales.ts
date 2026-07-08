@@ -72,7 +72,6 @@ interface CompleteSaleParams {
   discount: Discount
   paymentMethod: PaymentMethod
   cashReceived: number
-  gcashRef: string
   subtotal: number
   discountAmount: number
   total: number

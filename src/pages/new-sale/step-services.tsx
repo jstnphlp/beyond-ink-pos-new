@@ -3,7 +3,6 @@ import { usePosStore, SERVICES, SERVICE_CATEGORIES } from '@/stores/pos-store'
 import type { Department, SelectedService } from '@/stores/pos-store'
 import { cn } from '@/lib/utils'
 import { X, FileText, ChevronDown, Check } from 'lucide-react'
-import { ScrollArea } from '@/components/ui/scroll-area'
 
 const DEPT_ACCENT: Record<Department, string> = {
   Physical: 'border-blue-500/40 bg-blue-500/5',
