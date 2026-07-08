@@ -1,7 +1,9 @@
-import { usePosStore, MATERIALS, ADD_ONS } from '@/stores/pos-store'
+import { usePosStore, MATERIALS } from '@/stores/pos-store'
+import { completeSale } from '@/shared/api/sales'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { toast } from 'sonner'
 import {
   Receipt,
   Save,
@@ -14,12 +16,18 @@ export function OrderSummary() {
   const {
     selectedServices,
     delivery,
+    discount,
+    paymentMethod,
+    cashReceived,
+    gcashRef,
     getSubtotal,
     getDiscountAmount,
     getTotal,
+    getChangeDue,
     isCompletable,
     isProcessing,
     setIsProcessing,
+    resetSale,
   } = usePosStore()
 
   const subtotal = getSubtotal()
@@ -28,13 +36,32 @@ export function OrderSummary() {
   const deliveryFee = delivery.enabled ? delivery.fee : 0
   const completable = isCompletable()
 
-  const handleCompleteSale = () => {
+  const handleCompleteSale = async () => {
     setIsProcessing(true)
-    // Simulate processing
-    setTimeout(() => {
+    try {
+      await completeSale({
+        selectedServices,
+        delivery,
+        discount,
+        paymentMethod,
+        cashReceived,
+        gcashRef,
+        subtotal,
+        discountAmount,
+        total,
+      })
+      toast.success('Sale completed', {
+        description: `Transaction saved — Total: ₱${total.toLocaleString()}`,
+      })
+      resetSale()
+    } catch (err) {
+      console.error('Sale failed:', err)
+      toast.error('Failed to save sale', {
+        description: err instanceof Error ? err.message : 'Something went wrong',
+      })
+    } finally {
       setIsProcessing(false)
-      alert('Sale completed successfully!')
-    }, 2000)
+    }
   }
 
   return (
@@ -70,14 +97,13 @@ export function OrderSummary() {
               const material = ss.materialId
                 ? MATERIALS.find((m) => m.id === ss.materialId)
                 : null
-              const addOns = ss.addOns
-                .map((id) => ADD_ONS.find((a) => a.id === id))
-                .filter(Boolean)
 
-              const serviceLineTotal = ss.service.basePrice * ss.quantity
-              const materialLineTotal = material
+              const unitPrice = material
+                ? material.pricePerUnit
+                : null
+              const lineTotal = material
                 ? material.pricePerUnit * ss.quantity
-                : 0
+                : null
 
               return (
                 <div key={ss.service.id} className="py-3">
@@ -87,41 +113,27 @@ export function OrderSummary() {
                       <p className="text-sm font-medium">
                         {ss.service.name}
                       </p>
-                      <p className="text-[11px] text-muted-foreground">
-                        ₱{ss.service.basePrice} × {ss.quantity}
-                      </p>
+                      {material && (
+                        <p className="text-[11px] text-muted-foreground">
+                          ₱{unitPrice!.toLocaleString()}/{material.unit} × {ss.quantity}
+                        </p>
+                      )}
                     </div>
-                    <span className="ml-3 text-sm font-semibold tabular-nums">
-                      ₱{serviceLineTotal.toLocaleString()}
-                    </span>
+                    {lineTotal !== null && (
+                      <span className="ml-3 text-sm font-semibold tabular-nums">
+                        ₱{lineTotal.toLocaleString()}
+                      </span>
+                    )}
                   </div>
 
                   {/* Material */}
                   {material && (
                     <div className="mt-1.5 flex items-center justify-between pl-3">
                       <p className="text-[11px] text-muted-foreground">
-                        + {material.name} × {ss.quantity}
+                        {material.name}
                       </p>
-                      <span className="text-[11px] font-medium text-muted-foreground tabular-nums">
-                        ₱{materialLineTotal.toLocaleString()}
-                      </span>
                     </div>
                   )}
-
-                  {/* Add-ons */}
-                  {addOns.map((addon) => (
-                    <div
-                      key={addon!.id}
-                      className="mt-1 flex items-center justify-between pl-3"
-                    >
-                      <p className="text-[11px] text-muted-foreground">
-                        + {addon!.name}
-                      </p>
-                      <span className="text-[11px] font-medium text-muted-foreground tabular-nums">
-                        ₱{addon!.price.toLocaleString()}
-                      </span>
-                    </div>
-                  ))}
                 </div>
               )
             })}

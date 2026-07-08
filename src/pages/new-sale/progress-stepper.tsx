@@ -4,7 +4,7 @@ import { Check } from 'lucide-react'
 
 const STEPS = [
   { number: 1, label: 'Services' },
-  { number: 2, label: 'Materials & Add-ons' },
+  { number: 2, label: 'Materials' },
   { number: 3, label: 'Delivery & Discount' },
   { number: 4, label: 'Payment' },
 ]

@@ -120,6 +120,7 @@ export function StepPayment() {
               onChange={(e) =>
                 setCashReceived(parseFloat(e.target.value) || 0)
               }
+              onWheel={(e) => e.currentTarget.blur()}
               className="input-numeric border-border [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               autoFocus
             />

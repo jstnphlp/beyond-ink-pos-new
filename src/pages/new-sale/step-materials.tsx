@@ -1,7 +1,5 @@
-import { usePosStore, MATERIALS, ADD_ONS } from '@/stores/pos-store'
+import { usePosStore, MATERIALS, getMaterialsForService } from '@/stores/pos-store'
 import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
-import { cn } from '@/lib/utils'
 import { AlertTriangle, Minus, Plus, Package } from 'lucide-react'
 
 export function StepMaterials() {
@@ -9,7 +7,6 @@ export function StepMaterials() {
     selectedServices,
     updateServiceMaterial,
     updateServiceQuantity,
-    toggleServiceAddOn,
   } = usePosStore()
 
   if (selectedServices.length === 0) {
@@ -30,10 +27,10 @@ export function StepMaterials() {
     <div className="space-y-5">
       <div>
         <h2 className="text-lg font-semibold tracking-tight">
-          Materials & Add-ons
+          Materials & Quantity
         </h2>
         <p className="mt-0.5 text-sm text-muted-foreground">
-          Configure materials and optional add-ons for each service.
+          Configure materials and quantity for each service.
         </p>
       </div>
 
@@ -61,10 +58,9 @@ export function StepMaterials() {
                   className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm transition-default focus:border-ring focus:ring-2 focus:ring-ring/30 focus:outline-none"
                 >
                   <option value="">No material</option>
-                  {MATERIALS.map((mat) => (
+                  {getMaterialsForService(ss.service.id).map((mat) => (
                     <option key={mat.id} value={mat.id}>
                       {mat.name} — ₱{mat.pricePerUnit}/{mat.unit}
-                      {mat.stockLevel === 'low' ? ' ⚠' : ''}
                     </option>
                   ))}
                 </select>
@@ -83,6 +79,24 @@ export function StepMaterials() {
                     )
                   }
                   return null
+                })()}
+
+                {/* Price display */}
+                {ss.materialId && (() => {
+                  const mat = MATERIALS.find((m) => m.id === ss.materialId)
+                  if (!mat) return null
+                  const unitPrice = mat.pricePerUnit
+                  const lineTotal = unitPrice * ss.quantity
+                  return (
+                    <div className="mt-2 flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2">
+                      <span className="text-xs text-muted-foreground">
+                        ₱{unitPrice.toLocaleString()}/{mat.unit}
+                      </span>
+                      <span className="text-sm font-semibold tabular-nums">
+                        ₱{lineTotal.toLocaleString()}
+                      </span>
+                    </div>
+                  )
                 })()}
               </div>
 
@@ -129,46 +143,6 @@ export function StepMaterials() {
                     <Plus className="h-3.5 w-3.5" />
                   </button>
                 </div>
-              </div>
-            </div>
-
-            {/* Add-ons */}
-            <div className="mt-4">
-              <label className="mb-2 block text-xs font-medium text-muted-foreground">
-                Add-ons
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {ADD_ONS.map((addon) => {
-                  const isActive = ss.addOns.includes(addon.id)
-                  return (
-                    <button
-                      key={addon.id}
-                      type="button"
-                      onClick={() =>
-                        toggleServiceAddOn(ss.service.id, addon.id)
-                      }
-                      className={cn(
-                        'inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-all duration-150',
-                        isActive
-                          ? 'border-brand/40 bg-brand/10 text-brand'
-                          : 'border-border bg-background text-muted-foreground hover:border-border hover:bg-muted/50 hover:text-foreground'
-                      )}
-                    >
-                      {addon.name}
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          'ml-0.5 px-1.5 py-0 text-[10px] tabular-nums',
-                          isActive
-                            ? 'border-brand/30 text-brand'
-                            : 'text-muted-foreground'
-                        )}
-                      >
-                        +₱{addon.price}
-                      </Badge>
-                    </button>
-                  )
-                })}
               </div>
             </div>
           </div>
