@@ -22,15 +22,6 @@ export interface Transaction {
   cashier: string
 }
 
-export interface Draft {
-  id: string
-  draftNumber: string
-  services: string[]
-  subtotal: number
-  createdAt: string
-  cashier: string
-}
-
 export interface StaffSession {
   id: string
   name: string
@@ -75,12 +66,6 @@ const MOCK_TRANSACTIONS: Transaction[] = [
   { id: '6', transactionNumber: 'TXN-2026-0042', customer: 'Jake Cruz', department: 'Design', amount: 800, status: 'completed', timestamp: '2026-07-07T17:45:00', cashier: 'Ana M.' },
 ]
 
-const MOCK_DRAFTS: Draft[] = [
-  { id: '1', draftNumber: 'DRF-0012', services: ['Document Printing', 'Laminating'], subtotal: 120, createdAt: '2026-07-08T08:20:00', cashier: 'Juan C.' },
-  { id: '2', draftNumber: 'DRF-0011', services: ['Logo Design'], subtotal: 500, createdAt: '2026-07-08T07:45:00', cashier: 'Ana M.' },
-  { id: '3', draftNumber: 'DRF-0010', services: ['Tarpaulin Printing', 'Grommets'], subtotal: 680, createdAt: '2026-07-07T16:30:00', cashier: 'Juan C.' },
-]
-
 const MOCK_STAFF: StaffSession[] = [
   { id: '1', name: 'Juan Carlos', email: 'juan@beyondink.ph', department: 'Physical', clockIn: '2026-07-08T06:00:00', status: 'active' },
   { id: '2', name: 'Ana Martinez', email: 'ana@beyondink.ph', department: 'Design', clockIn: '2026-07-08T07:00:00', status: 'active' },
@@ -93,7 +78,6 @@ const MOCK_STAFF: StaffSession[] = [
 interface DashboardState {
   summaries: DepartmentSummary[]
   transactions: Transaction[]
-  drafts: Draft[]
   staffSessions: StaffSession[]
   activeTab: 'transactions' | 'drafts' | 'staff'
   setActiveTab: (tab: DashboardState['activeTab']) => void
@@ -102,7 +86,6 @@ interface DashboardState {
 export const useDashboardStore = create<DashboardState>((set) => ({
   summaries: MOCK_SUMMARIES,
   transactions: MOCK_TRANSACTIONS,
-  drafts: MOCK_DRAFTS,
   staffSessions: MOCK_STAFF,
   activeTab: 'transactions',
   setActiveTab: (tab) => set({ activeTab: tab }),

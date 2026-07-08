@@ -1,3 +1,7 @@
+import { useEffect, useRef } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import { getDraft } from '@/shared/api/drafts'
 import { ProgressStepper } from './progress-stepper'
 import { StepServices } from './step-services'
 import { StepMaterials } from './step-materials'
@@ -6,16 +10,48 @@ import { StepPayment } from './step-payment'
 import { OrderSummary } from './order-summary'
 import { usePosStore } from '@/stores/pos-store'
 import { Button } from '@/components/ui/button'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
 
 const STEP_COMPONENTS = [StepServices, StepMaterials, StepDelivery, StepPayment]
 
 export function NewSalePage() {
-  const { currentStep, nextStep, prevStep, selectedServices } = usePosStore()
+  const { currentStep, nextStep, prevStep, selectedServices, loadDraft, currentDraftId } = usePosStore()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const draftId = searchParams.get('draftId')
+  const draftLoadedRef = useRef(false)
+
+  const { data: draft, isLoading: isLoadingDraft } = useQuery({
+    queryKey: ['draft', draftId],
+    queryFn: () => getDraft(draftId!),
+    enabled: !!draftId && !draftLoadedRef.current,
+  })
+
+  useEffect(() => {
+    if (draft && draftId && !draftLoadedRef.current) {
+      draftLoadedRef.current = true
+      loadDraft(draft.id, draft.draftPayload)
+      setSearchParams({}, { replace: true })
+    }
+  }, [draft, draftId, loadDraft, setSearchParams])
+
+  useEffect(() => {
+    if (!draftId) {
+      draftLoadedRef.current = false
+    }
+  }, [draftId])
+
   const StepComponent = STEP_COMPONENTS[currentStep - 1]
 
   const canProceed =
     currentStep === 1 ? selectedServices.length > 0 : true
+
+  if (isLoadingDraft) {
+    return (
+      <div className="flex h-[calc(100vh-4rem)] items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
 
   return (
     <div className="flex h-[calc(100vh-4rem)] overflow-hidden">

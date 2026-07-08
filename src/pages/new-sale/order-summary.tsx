@@ -1,9 +1,21 @@
+import { useState } from 'react'
 import { usePosStore, MATERIALS } from '@/stores/pos-store'
 import { completeSale } from '@/shared/api/sales'
+import { saveDraft, updateDraft } from '@/shared/api/drafts'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Input } from '@/components/ui/input'
+import {
+  Dialog,
+  DialogTrigger,
+  DialogPopup,
+  DialogTitle,
+  DialogDescription,
+  DialogClose,
+} from '@/components/ui/dialog'
 import { toast } from 'sonner'
+import { useQueryClient } from '@tanstack/react-query'
 import {
   Receipt,
   Save,
@@ -13,10 +25,12 @@ import {
 } from 'lucide-react'
 
 export function OrderSummary() {
+  const queryClient = useQueryClient()
   const {
     selectedServices,
     delivery,
     discount,
+    currentStep,
     paymentMethod,
     cashReceived,
     gcashRef,
@@ -28,7 +42,14 @@ export function OrderSummary() {
     isProcessing,
     setIsProcessing,
     resetSale,
+    currentDraftId,
+    setCurrentDraftId,
+    isSavingDraft,
+    setIsSavingDraft,
   } = usePosStore()
+
+  const [draftName, setDraftName] = useState('')
+  const [dialogOpen, setDialogOpen] = useState(false)
 
   const subtotal = getSubtotal()
   const discountAmount = getDiscountAmount()
@@ -62,6 +83,54 @@ export function OrderSummary() {
     } finally {
       setIsProcessing(false)
     }
+  }
+
+  const handleSaveDraft = async () => {
+    setIsSavingDraft(true)
+    setDialogOpen(false)
+    try {
+      const params = {
+        name: draftName.trim() || undefined,
+        selectedServices,
+        delivery,
+        discount,
+        currentStep,
+        subtotal,
+        total,
+      }
+
+      if (currentDraftId) {
+        await updateDraft(currentDraftId, params)
+        toast.success('Draft updated', {
+          description: `Draft saved — ₱${total.toLocaleString()}`,
+        })
+      } else {
+        const id = await saveDraft(params)
+        setCurrentDraftId(id)
+        toast.success('Draft saved', {
+          description: `Draft created — ₱${total.toLocaleString()}`,
+        })
+      }
+      queryClient.invalidateQueries({ queryKey: ['drafts'] })
+      resetSale()
+      setDraftName('')
+    } catch (err) {
+      console.error('Save draft failed:', err)
+      toast.error('Failed to save draft', {
+        description: err instanceof Error ? err.message : 'Something went wrong',
+      })
+    } finally {
+      setIsSavingDraft(false)
+    }
+  }
+
+  const handleDraftButtonClick = () => {
+    if (selectedServices.length === 0) {
+      toast.error('Add at least one service before saving a draft.')
+      return
+    }
+    setDraftName('')
+    setDialogOpen(true)
   }
 
   return (
@@ -184,14 +253,61 @@ export function OrderSummary() {
 
         {/* Action buttons */}
         <div className="flex gap-2 border-t border-border px-5 py-4">
-          <Button
-            variant="outline"
-            size="lg"
-            className="flex-1 gap-1.5"
-          >
-            <Save className="h-4 w-4" />
-            Save Draft
-          </Button>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger
+              className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-input bg-background px-4 py-2.5 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50"
+              disabled={isSavingDraft || selectedServices.length === 0}
+              onClick={(e) => {
+                e.preventDefault()
+                handleDraftButtonClick()
+              }}
+            >
+              {isSavingDraft ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4" />
+              )}
+              {currentDraftId ? 'Update Draft' : 'Save Draft'}
+            </DialogTrigger>
+            <DialogPopup>
+              <DialogTitle>Save Draft</DialogTitle>
+              <DialogDescription className="mt-1.5">
+                Optionally name this draft for easy identification.
+              </DialogDescription>
+              <div className="mt-4">
+                <Input
+                  placeholder="e.g. Maria's print order"
+                  value={draftName}
+                  onChange={(e) => setDraftName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSaveDraft()
+                  }}
+                  autoFocus
+                />
+              </div>
+              <div className="mt-5 flex justify-end gap-2">
+                <DialogClose
+                  className="inline-flex items-center justify-center rounded-lg border border-input bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
+                  onClick={() => setDraftName('')}
+                >
+                  Cancel
+                </DialogClose>
+                <Button
+                  onClick={handleSaveDraft}
+                  disabled={isSavingDraft}
+                  className="gap-1.5"
+                >
+                  {isSavingDraft ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4" />
+                  )}
+                  Save
+                </Button>
+              </div>
+            </DialogPopup>
+          </Dialog>
+
           <Button
             size="lg"
             disabled={!completable || isProcessing}
