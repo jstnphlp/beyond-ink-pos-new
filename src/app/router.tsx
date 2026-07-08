@@ -1,6 +1,14 @@
 import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom'
 import { AppLayout } from '@/components/layout/app-layout'
 import { AuthGuard } from '@/components/auth/auth-guard'
+import { useAuth } from '@/shared/hooks/use-auth'
+
+function RoleRedirect() {
+  const { role, loading } = useAuth()
+  if (loading) return null
+  if (role === 'staff') return <Navigate to="/new-sale" replace />
+  return <Navigate to="/dashboard" replace />
+}
 
 const router = createBrowserRouter([
   {
@@ -19,6 +27,10 @@ const router = createBrowserRouter([
     children: [
       {
         path: '/',
+        element: <RoleRedirect />,
+      },
+      {
+        path: '/dashboard',
         lazy: async () => {
           const { DashboardPage } = await import('@/pages/dashboard')
           return { Component: DashboardPage }

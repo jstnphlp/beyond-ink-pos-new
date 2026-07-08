@@ -1,10 +1,9 @@
-import { useDashboardStore } from '@/stores/dashboard-store'
+import { useDepartmentSummaries } from '@/shared/hooks/use-dashboard'
 import { Card, CardContent } from '@/components/ui/card'
 import {
   Printer,
   Palette,
   Code2,
-  TrendingUp,
   ArrowUpRight,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
@@ -16,17 +15,17 @@ const ICON_MAP: Record<string, LucideIcon> = {
 }
 
 const DEPARTMENT_STYLES: Record<string, { gradient: string; glow: string; accent: string }> = {
-  Physical: {
+  physical_dept: {
     gradient: 'from-blue-500/10 to-blue-600/5',
     glow: 'shadow-blue-500/5',
     accent: 'text-blue-400',
   },
-  Design: {
+  design_dept: {
     gradient: 'from-purple-500/10 to-purple-600/5',
     glow: 'shadow-purple-500/5',
     accent: 'text-purple-400',
   },
-  Dev: {
+  dev_dept: {
     gradient: 'from-emerald-500/10 to-emerald-600/5',
     glow: 'shadow-emerald-500/5',
     accent: 'text-emerald-400',
@@ -34,13 +33,13 @@ const DEPARTMENT_STYLES: Record<string, { gradient: string; glow: string; accent
 }
 
 export function SummaryCards() {
-  const summaries = useDashboardStore((s) => s.summaries)
+  const { data: summaries } = useDepartmentSummaries()
 
   return (
     <div className="grid gap-4 md:grid-cols-3">
       {(summaries ?? []).map((summary) => {
         const Icon = ICON_MAP[summary.icon] ?? Printer
-        const style = DEPARTMENT_STYLES[summary.department]
+        const style = DEPARTMENT_STYLES[summary.department] ?? DEPARTMENT_STYLES.physical_dept
 
         return (
           <Card
@@ -52,10 +51,6 @@ export function SummaryCards() {
               <div className="flex items-center justify-between">
                 <div className={`flex h-10 w-10 items-center justify-center rounded-xl bg-background/50 ${style.accent}`}>
                   <Icon className="h-5 w-5" />
-                </div>
-                <div className="flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-success">
-                  <TrendingUp className="h-3 w-3" />
-                  <span className="text-[11px] font-semibold">+12%</span>
                 </div>
               </div>
 
