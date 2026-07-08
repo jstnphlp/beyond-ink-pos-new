@@ -1,0 +1,187 @@
+import { useDashboardStore } from '@/stores/dashboard-store'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Badge } from '@/components/ui/badge'
+import { Receipt, FileText, Users } from 'lucide-react'
+
+const STATUS_STYLES: Record<string, string> = {
+  completed: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25',
+  pending: 'bg-amber-500/15 text-amber-400 border-amber-500/25',
+  refunded: 'bg-red-500/15 text-red-400 border-red-500/25',
+  active: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25',
+  break: 'bg-amber-500/15 text-amber-400 border-amber-500/25',
+  offline: 'bg-zinc-500/15 text-zinc-400 border-zinc-500/25',
+}
+
+const DEPT_DOT: Record<string, string> = {
+  Physical: 'bg-blue-400',
+  Design: 'bg-purple-400',
+  Dev: 'bg-emerald-400',
+}
+
+function formatTime(iso: string) {
+  return new Date(iso).toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  })
+}
+
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+  })
+}
+
+export function DashboardTabs() {
+  const { transactions, drafts, staffSessions, activeTab, setActiveTab } =
+    useDashboardStore()
+
+  return (
+    <Card className="border-border/50">
+      <Tabs
+        value={activeTab}
+        onValueChange={(v) => setActiveTab(v as typeof activeTab)}
+      >
+        <CardHeader className="pb-0">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base font-semibold">
+              Activity Overview
+            </CardTitle>
+            <TabsList className="bg-muted/50">
+              <TabsTrigger
+                value="transactions"
+                className="gap-1.5 text-xs data-[state=active]:bg-background"
+              >
+                <Receipt className="h-3.5 w-3.5" />
+                Transactions
+              </TabsTrigger>
+              <TabsTrigger
+                value="drafts"
+                className="gap-1.5 text-xs data-[state=active]:bg-background"
+              >
+                <FileText className="h-3.5 w-3.5" />
+                Drafts
+              </TabsTrigger>
+              <TabsTrigger
+                value="staff"
+                className="gap-1.5 text-xs data-[state=active]:bg-background"
+              >
+                <Users className="h-3.5 w-3.5" />
+                Staff
+              </TabsTrigger>
+            </TabsList>
+          </div>
+        </CardHeader>
+
+        <CardContent className="pt-4">
+          {/* Recent Transactions */}
+          <TabsContent value="transactions" className="mt-0">
+            <div className="space-y-0 divide-y divide-border/50">
+              {transactions.map((txn) => (
+                <div
+                  key={txn.id}
+                  className="flex items-center justify-between py-3.5 transition-default hover:bg-muted/30 px-2 -mx-2 rounded-lg"
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`h-2 w-2 rounded-full ${DEPT_DOT[txn.department]}`}
+                    />
+                    <div>
+                      <p className="text-sm font-medium">{txn.customer}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {txn.transactionNumber} · {txn.cashier}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <Badge
+                      variant="outline"
+                      className={`border text-[10px] font-semibold uppercase ${STATUS_STYLES[txn.status]}`}
+                    >
+                      {txn.status}
+                    </Badge>
+                    <div className="text-right">
+                      <p className="text-sm font-semibold tabular-nums">
+                        ₱{txn.amount.toLocaleString()}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {formatDate(txn.timestamp)} {formatTime(txn.timestamp)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </TabsContent>
+
+          {/* Saved Drafts */}
+          <TabsContent value="drafts" className="mt-0">
+            <div className="space-y-0 divide-y divide-border/50">
+              {drafts.map((draft) => (
+                <div
+                  key={draft.id}
+                  className="flex items-center justify-between py-3.5 transition-default hover:bg-muted/30 px-2 -mx-2 rounded-lg"
+                >
+                  <div>
+                    <p className="text-sm font-medium">{draft.draftNumber}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {draft.services.join(', ')} · {draft.cashier}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-semibold tabular-nums">
+                      ₱{draft.subtotal.toLocaleString()}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      {formatDate(draft.createdAt)}{' '}
+                      {formatTime(draft.createdAt)}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </TabsContent>
+
+          {/* Active Staff Sessions */}
+          <TabsContent value="staff" className="mt-0">
+            <div className="space-y-0 divide-y divide-border/50">
+              {staffSessions.map((staff) => (
+                <div
+                  key={staff.id}
+                  className="flex items-center justify-between py-3.5 transition-default hover:bg-muted/30 px-2 -mx-2 rounded-lg"
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`h-2 w-2 rounded-full ${DEPT_DOT[staff.department]}`}
+                    />
+                    <div>
+                      <p className="text-sm font-medium">{staff.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {staff.email}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <Badge
+                      variant="outline"
+                      className={`border text-[10px] font-semibold uppercase ${STATUS_STYLES[staff.status]}`}
+                    >
+                      {staff.status}
+                    </Badge>
+                    <div className="text-right">
+                      <p className="text-xs text-muted-foreground">
+                        Clocked in {formatTime(staff.clockIn)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </TabsContent>
+        </CardContent>
+      </Tabs>
+    </Card>
+  )
+}
