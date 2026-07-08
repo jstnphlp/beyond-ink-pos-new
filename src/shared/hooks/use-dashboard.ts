@@ -14,7 +14,6 @@ export function useDepartmentSummaries() {
     staleTime: 2 * 60_000,
     gcTime: 30 * 60_000,
     placeholderData: keepPreviousData,
-    refetchOnWindowFocus: true,
   })
 }
 
@@ -25,6 +24,5 @@ export function useRecentTransactions() {
     staleTime: 2 * 60_000,
     gcTime: 30 * 60_000,
     placeholderData: keepPreviousData,
-    refetchOnWindowFocus: true,
   })
 }

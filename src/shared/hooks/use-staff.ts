@@ -35,7 +35,6 @@ export function useActiveSessions() {
     staleTime: 2 * 60_000,
     gcTime: 30 * 60_000,
     placeholderData: keepPreviousData,
-    refetchOnWindowFocus: true,
   })
 }
 

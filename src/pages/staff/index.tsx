@@ -69,19 +69,52 @@ function ClockInDialog() {
   const { data: activeSessions } = useActiveSessions()
   const clockInMutation = useClockIn()
   const [open, setOpen] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
   const activeIds = new Set((activeSessions ?? []).map((s) => s.staffMemberId))
   const available = (members ?? []).filter((m) => !activeIds.has(m.id))
 
-  function handleClockIn(member: { id: string; name: string }) {
-    clockInMutation.mutate(
-      { staffMemberId: member.id, staffName: member.name },
-      { onSuccess: () => setOpen(false) },
-    )
+  function toggleMember(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }
+
+  function handleClockInSelected() {
+    const toClockIn = available.filter((m) => selectedIds.has(m.id))
+    let completed = 0
+    for (const member of toClockIn) {
+      clockInMutation.mutate(
+        { staffMemberId: member.id, staffName: member.name },
+        {
+          onSettled: () => {
+            completed++
+            if (completed === toClockIn.length) {
+              setSelectedIds(new Set())
+              setOpen(false)
+            }
+          },
+        },
+      )
+    }
+  }
+
+  // Reset selection when dialog opens/closes
+  function handleOpenChange(nextOpen: boolean) {
+    setOpen(nextOpen)
+    if (!nextOpen) {
+      setSelectedIds(new Set())
+    }
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger
         render={<Button size="sm" className="gap-1.5" />}
       >
@@ -91,7 +124,7 @@ function ClockInDialog() {
       <DialogPopup>
         <DialogTitle>Clock In</DialogTitle>
         <DialogDescription>
-          Who is starting their shift?
+          Select staff members to start their shift.
         </DialogDescription>
 
         <div className="mt-4 space-y-2">
@@ -100,31 +133,71 @@ function ClockInDialog() {
               Everyone is already clocked in.
             </p>
           )}
-          {available.map((member) => (
-            <button
-              key={member.id}
-              type="button"
-              className="flex w-full items-center gap-3 rounded-lg border border-border p-3 text-left transition-colors hover:bg-muted/50 disabled:opacity-50"
-              disabled={clockInMutation.isPending}
-              onClick={() => handleClockIn(member)}
-            >
-              <Avatar className="h-8 w-8 border border-border">
-                <AvatarFallback className="bg-muted text-xs font-semibold">
-                  {getInitials(member.name)}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1">
-                <p className="text-sm font-medium">{member.name}</p>
-              </div>
-              <LogIn className="h-4 w-4 text-emerald-400" />
-            </button>
-          ))}
+          {available.map((member) => {
+            const isSelected = selectedIds.has(member.id)
+            return (
+              <button
+                key={member.id}
+                type="button"
+                className={`flex w-full items-center gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-muted/50 disabled:opacity-50 ${
+                  isSelected
+                    ? 'border-emerald-500/60 bg-emerald-500/10'
+                    : 'border-border'
+                }`}
+                disabled={clockInMutation.isPending}
+                onClick={() => toggleMember(member.id)}
+              >
+                <div
+                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors ${
+                    isSelected
+                      ? 'border-emerald-500 bg-emerald-500 text-white'
+                      : 'border-muted-foreground/40 bg-transparent'
+                  }`}
+                >
+                  {isSelected && (
+                    <svg
+                      className="h-3 w-3"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={3}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                  )}
+                </div>
+                <Avatar className="h-8 w-8 border border-border">
+                  <AvatarFallback className="bg-muted text-xs font-semibold">
+                    {getInitials(member.name)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <p className="text-sm font-medium">{member.name}</p>
+                </div>
+              </button>
+            )
+          })}
         </div>
 
-        <div className="mt-4 flex justify-end">
+        <div className="mt-4 flex items-center justify-between gap-2">
           <DialogClose render={<Button variant="ghost" size="sm" />}>
             Cancel
           </DialogClose>
+          {available.length > 0 && (
+            <Button
+              size="sm"
+              className="gap-1.5"
+              disabled={selectedIds.size === 0 || clockInMutation.isPending}
+              onClick={handleClockInSelected}
+            >
+              <LogIn className="h-3.5 w-3.5" />
+              Clock In {selectedIds.size > 0 ? `(${selectedIds.size})` : ''}
+            </Button>
+          )}
         </div>
       </DialogPopup>
     </Dialog>
