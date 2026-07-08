@@ -1,6 +1,7 @@
 import { supabase } from './supabase'
 import type { SelectedService, DeliveryInfo, Discount, PaymentMethod } from '@/stores/pos-store'
 import { MATERIALS, SERVICES, SERVICE_CATEGORIES } from '@/stores/pos-store'
+import type { StaffMember } from './staff.types'
 
 function slugToUuid(slug: string): string {
   let h1 = 0x811c9dc5
@@ -76,6 +77,7 @@ interface CompleteSaleParams {
   discountAmount: number
   total: number
   cashierName?: string
+  contributors?: StaffMember[]
 }
 
 export async function completeSale(params: CompleteSaleParams) {
@@ -88,6 +90,7 @@ export async function completeSale(params: CompleteSaleParams) {
     subtotal,
     total,
     cashierName = 'Staff',
+    contributors = [],
   } = params
 
   await ensureCatalogSynced()
@@ -128,5 +131,34 @@ export async function completeSale(params: CompleteSaleParams) {
   })
 
   if (error) throw error
+
+  if (contributors.length > 0) {
+    const transactionId = extractTransactionId(data)
+    if (transactionId) {
+      const rows = contributors.map((c) => ({
+        transaction_id: transactionId,
+        staff_member_id: c.id,
+        staff_name: c.name,
+      }))
+      const { error: contribError } = await supabase
+        .from('transaction_contributors')
+        .insert(rows)
+      if (contribError) throw contribError
+    }
+  }
+
   return data
+}
+
+function extractTransactionId(data: unknown): string | null {
+  if (!data) return null
+  if (typeof data === 'string') return data
+  if (Array.isArray(data) && data.length > 0) {
+    const row = data[0]
+    if (row && typeof row === 'object' && 'id' in row) return row.id as string
+  }
+  if (typeof data === 'object' && data !== null && 'id' in (data as Record<string, unknown>)) {
+    return (data as Record<string, unknown>).id as string
+  }
+  return null
 }
