@@ -1,0 +1,220 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum TransactionStatus {
+  draft
+  completed
+  cancelled
+}
+
+enum PaymentMethod {
+  cash
+  gcash
+}
+
+enum DiscountType {
+  fixed
+  percentage
+}
+
+enum MovementType {
+  sale_deduction
+  manual_adjustment
+  purchase_receipt
+}
+
+// ─── Auth / Access ────────────────────────────────────────────────────────────
+
+model AllowedUser {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email     String   @unique @db.Text
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  role      String   @default("physical_dept") @db.Text
+
+  @@map("allowed_users")
+}
+
+// ─── Inventory ────────────────────────────────────────────────────────────────
+
+model InventoryItem {
+  id                String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name              String  @db.Text
+  unit              String  @default("sheet") @db.Text
+  stockOnHand       Decimal @default(0) @map("stock_on_hand") @db.Decimal(10, 2)
+  lowStockThreshold Decimal @default(0) @map("low_stock_threshold") @db.Decimal(10, 2)
+  costPerUnit       Decimal @default(0) @map("cost_per_unit") @db.Decimal(10, 2)
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  inventoryMovements InventoryMovement[]
+  materialEntries    SalesMaterialEntry[]
+  materialPrices     ServiceMaterialPrice[]
+
+  @@map("inventory_items")
+}
+
+model InventoryMovement {
+  id              String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  inventoryItemId String       @map("inventory_item_id") @db.Uuid
+  transactionId   String?      @map("transaction_id") @db.Uuid
+  movementType    MovementType @map("movement_type")
+  quantityDelta   Decimal      @map("quantity_delta") @db.Decimal(10, 2)
+  createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz
+
+  inventoryItem InventoryItem      @relation(fields: [inventoryItemId], references: [id])
+  transaction   SalesTransaction?  @relation(fields: [transactionId], references: [id])
+
+  @@map("inventory_movements")
+}
+
+// ─── Services ─────────────────────────────────────────────────────────────────
+
+model ServiceCategory {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name       String   @db.Text
+  department String   @default("physical_dept") @db.Text
+  isActive   Boolean  @default(true) @map("is_active")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  services Service[]
+
+  @@map("service_categories")
+}
+
+model Service {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name       String    @db.Text
+  categoryId String?   @map("category_id") @db.Uuid
+  isActive   Boolean   @default(true) @map("is_active")
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  category       ServiceCategory?      @relation(fields: [categoryId], references: [id])
+  serviceLines   SalesServiceLine[]
+  materialPrices ServiceMaterialPrice[]
+
+  @@map("services")
+}
+
+model AddOn {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name       String   @db.Text
+  department String   @default("physical_dept") @db.Text
+  isActive   Boolean  @default(true) @map("is_active")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  addOnEntries SalesAddOnEntry[]
+
+  @@map("add_ons")
+}
+
+model ServiceMaterialPrice {
+  id                String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  serviceId         String  @map("service_id") @db.Uuid
+  inventoryItemId   String  @map("inventory_item_id") @db.Uuid
+  suggestedUnitPrice Decimal @map("suggested_unit_price") @db.Decimal(10, 2)
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  service       Service       @relation(fields: [serviceId], references: [id])
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id])
+
+  @@map("service_material_prices")
+}
+
+// ─── Sales ────────────────────────────────────────────────────────────────────
+
+model SalesTransaction {
+  id                String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  transactionNumber BigInt            @unique @map("transaction_number")
+  status            TransactionStatus @default(draft)
+  cashierName       String            @map("cashier_name") @db.Text
+  deliveryEnabled   Boolean           @default(false) @map("delivery_enabled")
+  customerName      String?           @map("customer_name") @db.Text
+  deliveryAddress   String?           @map("delivery_address") @db.Text
+  dropOffLocation   String?           @map("drop_off_location") @db.Text
+  deliveryFee       Decimal           @default(0) @map("delivery_fee") @db.Decimal(10, 2)
+  discountType      DiscountType?     @map("discount_type")
+  discountValue     Decimal?          @map("discount_value") @db.Decimal(10, 2)
+  draftPayload      Json              @default("{}") @map("draft_payload") @db.JsonB
+  subtotal          Decimal           @default(0) @db.Decimal(10, 2)
+  finalTotal        Decimal           @default(0) @map("final_total") @db.Decimal(10, 2)
+  paymentMethod     PaymentMethod?    @map("payment_method")
+  cashReceived      Decimal?          @map("cash_received") @db.Decimal(10, 2)
+  gcashAmountPaid   Decimal?          @map("gcash_amount_paid") @db.Decimal(10, 2)
+  changeDue         Decimal?          @map("change_due") @db.Decimal(10, 2)
+  completedAt       DateTime?         @map("completed_at") @db.Timestamptz
+  cancelledAt       DateTime?         @map("cancelled_at") @db.Timestamptz
+  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime          @updatedAt @map("updated_at") @db.Timestamptz
+  department        String            @default("physical_dept") @db.Text
+
+  serviceLines   SalesServiceLine[]
+  inventoryMovements InventoryMovement[]
+
+  @@map("sales_transactions")
+}
+
+model SalesServiceLine {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  transactionId String   @map("transaction_id") @db.Uuid
+  serviceId     String   @map("service_id") @db.Uuid
+  serviceName   String   @map("service_name") @db.Text
+  sortOrder     Int      @default(0) @map("sort_order")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  transaction   SalesTransaction      @relation(fields: [transactionId], references: [id])
+  service       Service               @relation(fields: [serviceId], references: [id])
+  materialEntries SalesMaterialEntry[]
+
+  @@map("sales_service_lines")
+}
+
+model SalesMaterialEntry {
+  id              String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  serviceLineId   String  @map("service_line_id") @db.Uuid
+  inventoryItemId String  @map("inventory_item_id") @db.Uuid
+  materialName    String  @map("material_name") @db.Text
+  quantity        Decimal @db.Decimal(10, 2)
+  unitPrice       Decimal @map("unit_price") @db.Decimal(10, 2)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  serviceLine  SalesServiceLine   @relation(fields: [serviceLineId], references: [id])
+  inventoryItem InventoryItem     @relation(fields: [inventoryItemId], references: [id])
+  addOnEntries  SalesAddOnEntry[]
+
+  @@map("sales_material_entries")
+}
+
+model SalesAddOnEntry {
+  id              String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  materialEntryId String  @map("material_entry_id") @db.Uuid
+  addOnId         String  @map("add_on_id") @db.Uuid
+  addOnName       String  @map("add_on_name") @db.Text
+  quantity        Decimal @db.Decimal(10, 2)
+  unitPrice       Decimal @map("unit_price") @db.Decimal(10, 2)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  materialEntry SalesMaterialEntry @relation(fields: [materialEntryId], references: [id])
+  addOn         AddOn              @relation(fields: [addOnId], references: [id])
+
+  @@map("sales_add_on_entries")
+}
+
+// ─── Staff ────────────────────────────────────────────────────────────────────
+
+model StaffSession {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  staffName      String    @map("staff_name") @db.Text
+  timeIn         DateTime  @default(now()) @map("time_in") @db.Timestamptz
+  timeOut        DateTime? @map("time_out") @db.Timestamptz
+  autoLoggedOut  Boolean   @default(false) @map("auto_logged_out")
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  @@map("staff_sessions")
+}
