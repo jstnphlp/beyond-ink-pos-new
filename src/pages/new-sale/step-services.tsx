@@ -1,78 +1,9 @@
 import { useState } from 'react'
 import { usePosStore, SERVICES, SERVICE_CATEGORIES } from '@/stores/pos-store'
-import type { Department } from '@/stores/pos-store'
+import type { Department, SelectedService } from '@/stores/pos-store'
 import { cn } from '@/lib/utils'
-import { Check, ChevronLeft, ArrowRight } from 'lucide-react'
-import {
-  FileText,
-  Image,
-  Sticker,
-  RectangleHorizontal,
-  LayoutGrid,
-  Palette,
-  Share2,
-  Code2,
-  BookOpen,
-  BookMarked,
-  Film,
-  Globe,
-  Copy,
-  ScanLine,
-  Layers,
-  Camera,
-  Award,
-  FileSpreadsheet,
-  Contact,
-  Pencil,
-  Keyboard,
-  Search,
-  ImagePlus,
-  Video,
-  ShoppingCart,
-  Monitor,
-  Cpu,
-  Plug,
-  Database,
-  MessageSquare,
-  PlayCircle,
-  Layout,
-} from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
-
-const ICON_MAP: Record<string, LucideIcon> = {
-  FileText,
-  Image,
-  Sticker,
-  RectangleHorizontal,
-  LayoutGrid,
-  Palette,
-  Share2,
-  Code2,
-  BookOpen,
-  BookMarked,
-  Film,
-  Globe,
-  Copy,
-  ScanLine,
-  Layers,
-  Camera,
-  Award,
-  FileSpreadsheet,
-  Contact,
-  Pencil,
-  Keyboard,
-  Search,
-  ImagePlus,
-  Video,
-  ShoppingCart,
-  Monitor,
-  Cpu,
-  Plug,
-  Database,
-  MessageSquare,
-  PlayCircle,
-  Layout,
-}
+import { X, FileText, ChevronDown, Check } from 'lucide-react'
+import { ScrollArea } from '@/components/ui/scroll-area'
 
 const DEPT_ACCENT: Record<Department, string> = {
   Physical: 'border-blue-500/40 bg-blue-500/5',
@@ -80,96 +11,149 @@ const DEPT_ACCENT: Record<Department, string> = {
   Dev: 'border-emerald-500/40 bg-emerald-500/5',
 }
 
-const DEPT_BG: Record<Department, string> = {
-  Physical: 'bg-blue-500/10',
-  Design: 'bg-purple-500/10',
-  Dev: 'bg-emerald-500/10',
-}
+function CategoryDropdown({
+  categoryId,
+  selectedServices,
+  selectedIds,
+  onToggle,
+  onRemove,
+}: {
+  categoryId: string
+  selectedServices: SelectedService[]
+  selectedIds: Set<string>
+  onToggle: (service: (typeof SERVICES)[number]) => void
+  onRemove: () => void
+}) {
+  const [open, setOpen] = useState(false)
 
-const DEPT_ICON_COLOR: Record<Department, string> = {
-  Physical: 'text-blue-400',
-  Design: 'text-purple-400',
-  Dev: 'text-emerald-400',
+  const category = SERVICE_CATEGORIES.find((c) => c.id === categoryId)
+  const services = SERVICES.filter((s) => s.categoryId === categoryId)
+  const unselected = services.filter((s) => !selectedIds.has(s.id))
+  const selected = selectedServices.filter((ss) => ss.service.categoryId === categoryId)
+
+  if (!category) return null
+
+  return (
+    <div
+      className={cn(
+        'rounded-xl border p-4 transition-all duration-200',
+        selected.length > 0
+          ? DEPT_ACCENT[category.department]
+          : 'border-border/60 bg-card'
+      )}
+    >
+      {/* Category header */}
+      <div className="mb-3 flex items-center justify-between">
+        <div>
+          <p className="text-sm font-semibold">{category.name}</p>
+          <p className="text-xs text-muted-foreground">
+            {selected.length} of {services.length} selected
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {selected.length > 0 && (
+            <div className="flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1">
+              <span className="text-[10px] font-bold text-brand-foreground">
+                {selected.length}
+              </span>
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={onRemove}
+            className="flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            title="Remove category"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+
+      {/* Dropdown trigger */}
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() => setOpen(!open)}
+          className={cn(
+            'flex h-9 w-full items-center justify-between rounded-lg border border-border bg-background px-3 text-sm transition-colors',
+            'hover:bg-muted/30 focus:outline-none focus:ring-2 focus:ring-ring/50',
+            open && 'ring-2 ring-ring/50'
+          )}
+        >
+          <span className={unselected.length === 0 ? 'text-muted-foreground' : 'text-foreground'}>
+            {unselected.length === 0 ? 'All added' : 'Add a service...'}
+          </span>
+          <ChevronDown
+            className={cn(
+              'h-4 w-4 text-muted-foreground transition-transform',
+              open && 'rotate-180'
+            )}
+          />
+        </button>
+
+        {open && unselected.length > 0 && (
+          <div className="absolute z-50 mt-1 w-full overflow-y-auto rounded-lg border border-border bg-popover shadow-lg" style={{ maxHeight: Math.min(unselected.length * 40, 280) }}>
+              {unselected.map((service) => (
+                <button
+                  key={service.id}
+                  type="button"
+                  onClick={() => {
+                    onToggle(service)
+                    setOpen(false)
+                  }}
+                  className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm transition-colors hover:bg-accent"
+                >
+                  <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  <span className="flex-1 truncate">{service.name}</span>
+                  <span className="text-xs text-muted-foreground">
+                    ₱{service.basePrice}
+                  </span>
+                </button>
+              ))}
+          </div>
+        )}
+      </div>
+
+      {/* Selected services for this category */}
+      {selected.length > 0 && (
+        <div className="mt-3 space-y-1.5">
+          {selected.map((ss) => (
+            <div
+              key={ss.service.id}
+              className="flex items-center gap-2.5 rounded-lg bg-background/60 px-3 py-2"
+            >
+              <Check className="h-3.5 w-3.5 shrink-0 text-brand" />
+              <span className="flex-1 truncate text-sm font-medium">
+                {ss.service.name}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                ₱{ss.service.basePrice}
+              </span>
+              <button
+                type="button"
+                onClick={() => onToggle(ss.service)}
+                className="text-muted-foreground transition-colors hover:text-destructive"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
 }
 
 export function StepServices() {
-  const { selectedServices, toggleService } = usePosStore()
+  const { selectedCategoryIds, toggleCategory, selectedServices, toggleService } = usePosStore()
   const selectedIds = new Set(selectedServices.map((s) => s.service.id))
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null)
 
-  const selectedCategory = selectedCategoryId
-    ? SERVICE_CATEGORIES.find((c) => c.id === selectedCategoryId)
-    : null
-
-  const categoryServices = selectedCategoryId
-    ? SERVICES.filter((s) => s.categoryId === selectedCategoryId)
-    : []
-
-  const getCategorySelectedCount = (categoryId: string) =>
-    selectedServices.filter((ss) => ss.service.categoryId === categoryId).length
-
-  if (!selectedCategory) {
+  if (selectedCategoryIds.length === 0) {
     return (
-      <div className="space-y-5">
-        <div>
-          <h2 className="text-lg font-semibold tracking-tight">
-            Select Service Category
-          </h2>
-          <p className="mt-0.5 text-sm text-muted-foreground">
-            Choose a category to browse available services.
-          </p>
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          {SERVICE_CATEGORIES.map((category) => {
-            const Icon = ICON_MAP[category.icon] ?? FileText
-            const count = getCategorySelectedCount(category.id)
-
-            return (
-              <button
-                key={category.id}
-                type="button"
-                onClick={() => setSelectedCategoryId(category.id)}
-                className={cn(
-                  'group relative flex items-start gap-4 rounded-xl border p-4 text-left transition-all duration-200',
-                  count > 0
-                    ? `${DEPT_ACCENT[category.department]} ring-1 ring-inset ring-current/10`
-                    : 'border-border/60 bg-card hover:border-border hover:bg-muted/30'
-                )}
-              >
-                {/* Selected count badge */}
-                {count > 0 && (
-                  <div className="absolute right-3 top-3 flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1">
-                    <span className="text-[10px] font-bold text-brand-foreground">{count}</span>
-                  </div>
-                )}
-
-                {/* Icon */}
-                <div
-                  className={cn(
-                    'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors',
-                    count > 0
-                      ? `${DEPT_ICON_COLOR[category.department]} ${DEPT_BG[category.department]}`
-                      : 'bg-muted text-muted-foreground group-hover:text-foreground'
-                  )}
-                >
-                  <Icon className="h-5 w-5" />
-                </div>
-
-                {/* Text */}
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold">{category.name}</p>
-                  <div className="mt-2 flex items-center gap-1.5">
-                    <span className="text-xs font-medium text-muted-foreground">
-                      {SERVICES.filter((s) => s.categoryId === category.id).length} services
-                    </span>
-                    <ArrowRight className="h-3 w-3 text-muted-foreground/50" />
-                  </div>
-                </div>
-              </button>
-            )
-          })}
-        </div>
+      <div className="flex flex-col items-center justify-center py-20 text-center">
+        <p className="text-sm text-muted-foreground">
+          Go back and select at least one category first.
+        </p>
       </div>
     )
   }
@@ -177,69 +161,32 @@ export function StepServices() {
   return (
     <div className="space-y-5">
       <div>
-        <button
-          type="button"
-          onClick={() => setSelectedCategoryId(null)}
-          className="mb-3 inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-        >
-          <ChevronLeft className="h-4 w-4" />
-          Back to categories
-        </button>
         <h2 className="text-lg font-semibold tracking-tight">
-          {selectedCategory.name}
+          Select Services
         </h2>
         <p className="mt-0.5 text-sm text-muted-foreground">
-          Select one or more services from this category.
+          Pick services from each selected category. Remove a category with the ✕ button.
         </p>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        {categoryServices.map((service) => {
-          const isSelected = selectedIds.has(service.id)
-          const Icon = ICON_MAP[service.icon] ?? FileText
-
-          return (
-            <button
-              key={service.id}
-              type="button"
-              onClick={() => toggleService(service)}
-              className={cn(
-                'group relative flex items-start gap-4 rounded-xl border p-4 text-left transition-all duration-200',
-                isSelected
-                  ? `${DEPT_ACCENT[service.department]} ring-1 ring-inset ring-current/10`
-                  : 'border-border/60 bg-card hover:border-border hover:bg-muted/30'
-              )}
-            >
-              {/* Selected check */}
-              {isSelected && (
-                <div className="absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full bg-brand">
-                  <Check className="h-3 w-3 text-brand-foreground" />
-                </div>
-              )}
-
-              {/* Icon */}
-              <div
-                className={cn(
-                  'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors',
-                  isSelected
-                    ? `${DEPT_ICON_COLOR[service.department]} bg-background/50`
-                    : 'bg-muted text-muted-foreground group-hover:text-foreground'
-                )}
-              >
-                <Icon className="h-5 w-5" />
-              </div>
-
-              {/* Text */}
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold">{service.name}</p>
-                <p className="mt-0.5 text-xs text-muted-foreground line-clamp-2">
-                  {service.description}
-                </p>
-              </div>
-            </button>
-          )
-        })}
+      <div className="space-y-3">
+        {selectedCategoryIds.map((catId) => (
+          <CategoryDropdown
+            key={catId}
+            categoryId={catId}
+            selectedServices={selectedServices}
+            selectedIds={selectedIds}
+            onToggle={toggleService}
+            onRemove={() => toggleCategory(catId)}
+          />
+        ))}
       </div>
+
+      {selectedServices.length === 0 && (
+        <p className="text-center text-xs text-muted-foreground">
+          Use the dropdowns above to add services from each category.
+        </p>
+      )}
     </div>
   )
 }

@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { getDraft } from '@/shared/api/drafts'
 import { ProgressStepper } from './progress-stepper'
+import { StepCategory } from './step-category'
 import { StepServices } from './step-services'
 import { StepMaterials } from './step-materials'
 import { StepDelivery } from './step-delivery'
@@ -12,10 +13,10 @@ import { usePosStore } from '@/stores/pos-store'
 import { Button } from '@/components/ui/button'
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
 
-const STEP_COMPONENTS = [StepServices, StepMaterials, StepDelivery, StepPayment]
+const STEP_COMPONENTS = [StepCategory, StepServices, StepMaterials, StepDelivery, StepPayment]
 
 export function NewSalePage() {
-  const { currentStep, nextStep, prevStep, selectedServices, loadDraft } = usePosStore()
+  const { currentStep, nextStep, prevStep, selectedServices, selectedCategoryIds, loadDraft } = usePosStore()
   const [searchParams, setSearchParams] = useSearchParams()
   const draftId = searchParams.get('draftId')
   const draftLoadedRef = useRef(false)
@@ -43,7 +44,9 @@ export function NewSalePage() {
   const StepComponent = STEP_COMPONENTS[currentStep - 1]
 
   const canProceed =
-    currentStep === 1 ? selectedServices.length > 0 : true
+    currentStep === 1 ? selectedCategoryIds.length > 0 :
+    currentStep === 2 ? selectedServices.length > 0 :
+    true
 
   if (isLoadingDraft) {
     return (
@@ -79,7 +82,7 @@ export function NewSalePage() {
             <ChevronLeft className="h-4 w-4" />
             Back
           </Button>
-          {currentStep < 4 && (
+          {currentStep < 5 && (
             <Button
               size="lg"
               onClick={nextStep}

@@ -243,6 +243,10 @@ interface PosState {
   nextStep: () => void
   prevStep: () => void
 
+  // Selected categories (Step 1)
+  selectedCategoryIds: string[]
+  toggleCategory: (id: string) => void
+
   // Selected services
   selectedServices: SelectedService[]
   toggleService: (service: Service) => void
@@ -291,8 +295,20 @@ export const usePosStore = create<PosState>((set, get) => ({
   // Step
   currentStep: 1,
   setStep: (step) => set({ currentStep: step }),
-  nextStep: () => set((s) => ({ currentStep: Math.min(s.currentStep + 1, 4) })),
+  nextStep: () => set((s) => ({ currentStep: Math.min(s.currentStep + 1, 5) })),
   prevStep: () => set((s) => ({ currentStep: Math.max(s.currentStep - 1, 1) })),
+
+  // Selected categories
+  selectedCategoryIds: [],
+  toggleCategory: (id) =>
+    set((s) => {
+      const exists = s.selectedCategoryIds.includes(id)
+      return {
+        selectedCategoryIds: exists
+          ? s.selectedCategoryIds.filter((cid) => cid !== id)
+          : [...s.selectedCategoryIds, id],
+      }
+    }),
 
   // Services
   selectedServices: [],
@@ -375,7 +391,7 @@ export const usePosStore = create<PosState>((set, get) => ({
   // Actions
   isCompletable: () => {
     const s = get()
-    if (s.currentStep < 4) return false
+    if (s.currentStep < 5) return false
     if (s.selectedServices.length === 0) return false
     if (!s.paymentMethod) return false
     if (s.paymentMethod === 'cash' && s.cashReceived < s.getTotal()) return false
@@ -387,6 +403,7 @@ export const usePosStore = create<PosState>((set, get) => ({
   resetSale: () =>
     set({
       currentStep: 1,
+      selectedCategoryIds: [],
       selectedServices: [],
       delivery: { enabled: false, customerName: '', address: '', fee: 0 },
       discount: { type: 'amount', value: 0 },
@@ -404,6 +421,7 @@ export const usePosStore = create<PosState>((set, get) => ({
     set({
       currentDraftId: id,
       currentStep: payload.currentStep,
+      selectedCategoryIds: [...new Set(payload.selectedServices.map((s) => s.service.categoryId))],
       selectedServices: payload.selectedServices,
       delivery: payload.delivery,
       discount: payload.discount,

@@ -3,10 +3,11 @@ import { cn } from '@/lib/utils'
 import { Check } from 'lucide-react'
 
 const STEPS = [
-  { number: 1, label: 'Services' },
-  { number: 2, label: 'Materials' },
-  { number: 3, label: 'Delivery & Discount' },
-  { number: 4, label: 'Payment' },
+  { number: 1, label: 'Category' },
+  { number: 2, label: 'Services' },
+  { number: 3, label: 'Materials' },
+  { number: 4, label: 'Delivery & Discount' },
+  { number: 5, label: 'Payment' },
 ]
 
 export function ProgressStepper() {
