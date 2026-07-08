@@ -10,6 +10,11 @@ const PAGE_SIZE = 20
 
 let staleCleanupDone = false
 
+const DEFAULT_STAFF = [
+  { name: 'Mark', department: 'physical_dept' },
+  { name: 'Buknoy', department: 'physical_dept' },
+]
+
 export async function getStaffMembers(): Promise<StaffMember[]> {
   const { data, error } = await supabase
     .from('staff_members')
@@ -18,6 +23,22 @@ export async function getStaffMembers(): Promise<StaffMember[]> {
     .order('name')
 
   if (error) throw error
+
+  if ((data ?? []).length === 0) {
+    const { data: inserted, error: insertError } = await supabase
+      .from('staff_members')
+      .upsert(DEFAULT_STAFF, { onConflict: 'name' })
+      .select('id, name, department, is_active, created_at')
+
+    if (insertError) throw insertError
+    return (inserted ?? []).map((row) => ({
+      id: row.id,
+      name: row.name,
+      department: row.department,
+      isActive: row.is_active,
+      createdAt: row.created_at,
+    }))
+  }
 
   return (data ?? []).map((row) => ({
     id: row.id,
