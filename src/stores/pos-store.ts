@@ -268,8 +268,6 @@ interface PosState {
   setPaymentMethod: (method: PaymentMethod) => void
   cashReceived: number
   setCashReceived: (amount: number) => void
-  gcashRef: string
-  setGcashRef: (ref: string) => void
 
   // Computed
   getSubtotal: () => number
@@ -355,8 +353,6 @@ export const usePosStore = create<PosState>((set, get) => ({
   setPaymentMethod: (method) => set({ paymentMethod: method }),
   cashReceived: 0,
   setCashReceived: (amount) => set({ cashReceived: Math.max(0, amount) }),
-  gcashRef: '',
-  setGcashRef: (ref) => set({ gcashRef: ref }),
 
   // Computed
   getSubtotal: () => {
@@ -409,7 +405,6 @@ export const usePosStore = create<PosState>((set, get) => ({
       discount: { type: 'amount', value: 0 },
       paymentMethod: null,
       cashReceived: 0,
-      gcashRef: '',
       isProcessing: false,
       currentDraftId: null,
     }),
@@ -427,7 +422,6 @@ export const usePosStore = create<PosState>((set, get) => ({
       discount: payload.discount,
       paymentMethod: null,
       cashReceived: 0,
-      gcashRef: '',
       isProcessing: false,
     }),
   isSavingDraft: false,
