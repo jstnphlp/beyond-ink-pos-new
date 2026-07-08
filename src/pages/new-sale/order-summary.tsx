@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
+import { useActiveSessions } from '@/shared/hooks/use-staff'
 import {
   Receipt,
   Save,
@@ -26,6 +27,7 @@ import {
 
 export function OrderSummary() {
   const queryClient = useQueryClient()
+  const { data: activeSessions } = useActiveSessions()
   const {
     selectedServices,
     delivery,
@@ -37,7 +39,6 @@ export function OrderSummary() {
     getSubtotal,
     getDiscountAmount,
     getTotal,
-    getChangeDue,
     isCompletable,
     isProcessing,
     setIsProcessing,
@@ -50,6 +51,8 @@ export function OrderSummary() {
 
   const [draftName, setDraftName] = useState('')
   const [dialogOpen, setDialogOpen] = useState(false)
+
+  const cashierName = (activeSessions ?? []).map((s) => s.staffName).join(', ') || 'Staff'
 
   const subtotal = getSubtotal()
   const discountAmount = getDiscountAmount()
@@ -70,6 +73,7 @@ export function OrderSummary() {
         subtotal,
         discountAmount,
         total,
+        cashierName,
       })
       toast.success('Sale completed', {
         description: `Transaction saved — Total: ₱${total.toLocaleString()}`,
@@ -97,6 +101,7 @@ export function OrderSummary() {
         currentStep,
         subtotal,
         total,
+        cashierName,
       }
 
       if (currentDraftId) {
@@ -142,7 +147,7 @@ export function OrderSummary() {
           <div>
             <h3 className="text-sm font-bold">Transaction Draft</h3>
             <p className="text-[11px] text-muted-foreground">
-              Cashier: Juan Carlos
+              Cashier: {cashierName}
             </p>
           </div>
         </div>

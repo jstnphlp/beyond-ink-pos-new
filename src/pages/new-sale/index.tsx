@@ -15,7 +15,7 @@ import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
 const STEP_COMPONENTS = [StepServices, StepMaterials, StepDelivery, StepPayment]
 
 export function NewSalePage() {
-  const { currentStep, nextStep, prevStep, selectedServices, loadDraft, currentDraftId } = usePosStore()
+  const { currentStep, nextStep, prevStep, selectedServices, loadDraft } = usePosStore()
   const [searchParams, setSearchParams] = useSearchParams()
   const draftId = searchParams.get('draftId')
   const draftLoadedRef = useRef(false)

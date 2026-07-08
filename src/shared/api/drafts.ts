@@ -1,30 +1,6 @@
 import { supabase } from './supabase'
 import type { DraftPayload, DraftRecord } from './drafts.types'
 import type { SelectedService, DeliveryInfo, Discount } from '@/stores/pos-store'
-import { MATERIALS } from '@/stores/pos-store'
-
-function slugToUuid(slug: string): string {
-  let h1 = 0x811c9dc5
-  for (let i = 0; i < slug.length; i++) {
-    h1 ^= slug.charCodeAt(i)
-    h1 = Math.imul(h1, 0x01000193)
-  }
-  let h2 = 0x01000193
-  for (let i = slug.length - 1; i >= 0; i--) {
-    h2 ^= slug.charCodeAt(i)
-    h2 = Math.imul(h2, 0x811c9dc5)
-  }
-  const h3 = Math.imul(h1, h2)
-  const p = (n: number) => (n >>> 0).toString(16).padStart(8, '0')
-  const raw = p(h1) + p(h2) + p(h3) + p(h1 ^ h2)
-  return (
-    raw.slice(0, 8) + '-' +
-    raw.slice(8, 12) + '-' +
-    '4' + raw.slice(13, 16) + '-' +
-    '8' + raw.slice(17, 20) + '-' +
-    raw.slice(20, 32)
-  )
-}
 
 interface SaveDraftParams {
   name?: string

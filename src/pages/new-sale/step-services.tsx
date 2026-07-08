@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { usePosStore, SERVICES, SERVICE_CATEGORIES } from '@/stores/pos-store'
-import type { Service, ServiceCategory, Department } from '@/stores/pos-store'
+import type { Department } from '@/stores/pos-store'
 import { cn } from '@/lib/utils'
 import { Check, ChevronLeft, ArrowRight } from 'lucide-react'
 import {

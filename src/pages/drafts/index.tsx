@@ -10,7 +10,6 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Dialog,
-  DialogTrigger,
   DialogPopup,
   DialogTitle,
   DialogDescription,

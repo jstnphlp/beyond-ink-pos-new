@@ -1,12 +1,12 @@
 import { useDashboardStore } from '@/stores/dashboard-store'
 import { useQuery } from '@tanstack/react-query'
 import { getDrafts } from '@/shared/api/drafts'
-import type { DraftRecord } from '@/shared/api/drafts.types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { Receipt, FileText, Users } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { useActiveSessions } from '@/shared/hooks/use-staff'
 
 const STATUS_STYLES: Record<string, string> = {
   completed: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25',
@@ -39,7 +39,7 @@ function formatDate(iso: string) {
 }
 
 export function DashboardTabs() {
-  const { transactions, staffSessions, activeTab, setActiveTab } =
+  const { transactions, activeTab, setActiveTab } =
     useDashboardStore()
   const navigate = useNavigate()
 
@@ -47,6 +47,8 @@ export function DashboardTabs() {
     queryKey: ['drafts'],
     queryFn: getDrafts,
   })
+
+  const { data: activeSessions } = useActiveSessions()
 
   return (
     <Card className="border-border/50">
@@ -167,37 +169,37 @@ export function DashboardTabs() {
           {/* Active Staff Sessions */}
           <TabsContent value="staff" className="mt-0">
             <div className="space-y-0 divide-y divide-border/50">
-              {staffSessions.map((staff) => (
+              {(activeSessions ?? []).map((session) => (
                 <div
-                  key={staff.id}
+                  key={session.id}
                   className="flex items-center justify-between py-3.5 transition-default hover:bg-muted/30 px-2 -mx-2 rounded-lg"
                 >
                   <div className="flex items-center gap-3">
-                    <div
-                      className={`h-2 w-2 rounded-full ${DEPT_DOT[staff.department]}`}
-                    />
+                    <div className="h-2 w-2 rounded-full bg-emerald-400" />
                     <div>
-                      <p className="text-sm font-medium">{staff.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {staff.email}
-                      </p>
+                      <p className="text-sm font-medium">{session.staffName}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
                     <Badge
                       variant="outline"
-                      className={`border text-[10px] font-semibold uppercase ${STATUS_STYLES[staff.status]}`}
+                      className="border text-[10px] font-semibold uppercase bg-emerald-500/15 text-emerald-400 border-emerald-500/25"
                     >
-                      {staff.status}
+                      active
                     </Badge>
                     <div className="text-right">
                       <p className="text-xs text-muted-foreground">
-                        Clocked in {formatTime(staff.clockIn)}
+                        Clocked in {formatTime(session.timeIn)}
                       </p>
                     </div>
                   </div>
                 </div>
               ))}
+              {(activeSessions ?? []).length === 0 && (
+                <p className="py-8 text-center text-sm text-muted-foreground">
+                  No staff currently clocked in
+                </p>
+              )}
             </div>
           </TabsContent>
         </CardContent>
