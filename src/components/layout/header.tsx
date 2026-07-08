@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Calendar, Clock } from 'lucide-react'
+import { Calendar, Clock, Menu } from 'lucide-react'
 import { useActiveSessions } from '@/shared/hooks/use-staff'
 import { useAuth } from '@/shared/hooks/use-auth'
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
+import { SidebarContent } from './sidebar'
+import { useIsMobile } from '@/shared/hooks/use-is-mobile'
 
 const DEPARTMENT_COLORS: Record<string, string> = {
   Physical:
@@ -28,6 +31,8 @@ export function Header() {
   const now = useClock()
   const { data: activeSessions } = useActiveSessions()
   const { displayName, role } = useAuth()
+  const isMobile = useIsMobile()
+  const [sheetOpen, setSheetOpen] = useState(false)
 
   const timeStr = now.toLocaleTimeString('en-US', {
     hour: '2-digit',
@@ -48,12 +53,25 @@ export function Header() {
     : '—'
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/80 px-6 backdrop-blur-xl">
-      {/* Left — page context placeholder */}
-      <div />
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/80 px-4 backdrop-blur-xl md:px-6">
+      {/* Left — burger menu on mobile */}
+      <div>
+        {isMobile && (
+          <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+            <SheetTrigger
+              className="inline-flex h-9 w-9 items-center justify-center rounded-md transition-colors hover:bg-muted"
+            >
+              <Menu className="h-5 w-5" />
+            </SheetTrigger>
+            <SheetContent side="left" className="w-64 p-0">
+              <SidebarContent onNavigate={() => setSheetOpen(false)} />
+            </SheetContent>
+          </Sheet>
+        )}
+      </div>
 
       {/* Right — user info + clock */}
-      <div className="flex items-center gap-5">
+      <div className="flex items-center gap-3 md:gap-5">
         {/* Clock */}
         <div className="hidden items-center gap-4 md:flex">
           <div className="flex items-center gap-1.5 text-muted-foreground">
@@ -72,7 +90,7 @@ export function Header() {
         {/* Department badge */}
         <Badge
           variant="outline"
-          className={`border ${DEPARTMENT_COLORS['physical_dept']} text-xs font-semibold`}
+          className={`border ${DEPARTMENT_COLORS['physical_dept']} text-xs font-semibold hidden sm:inline-flex`}
         >
           Physical
         </Badge>
