@@ -46,7 +46,7 @@ function formatDraftDate(iso: string) {
 }
 
 function getDraftServiceNames(draft: DraftRecord): string[] {
-  return draft.draftPayload.selectedServices.map((ss) => ss.service.name)
+  return (draft.draftPayload.selectedServices ?? []).map((ss) => ss.service?.name ?? 'Unknown')
 }
 
 function getDraftLabel(draft: DraftRecord): string {

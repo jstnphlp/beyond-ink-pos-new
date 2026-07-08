@@ -132,7 +132,7 @@ export function DashboardTabs() {
           <TabsContent value="drafts" className="mt-0">
             <div className="space-y-0 divide-y divide-border/50">
               {(drafts ?? []).map((draft) => {
-                const services = draft.draftPayload.selectedServices.map((ss) => ss.service.name)
+                const services = (draft.draftPayload.selectedServices ?? []).map((ss) => ss.service?.name ?? 'Unknown')
                 const label = draft.draftPayload.name || `DRF-${draft.transactionNumber.slice(-4)}`
                 return (
                   <div

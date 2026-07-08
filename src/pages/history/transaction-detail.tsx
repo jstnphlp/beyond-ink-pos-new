@@ -65,7 +65,7 @@ export function TransactionDetail({
 
   return (
     <Dialog open={!!transactionId} onOpenChange={(open) => { if (!open) onClose() }}>
-      <DialogPopup className="fixed right-0 top-0 h-full w-full max-w-md translate-x-0 translate-y-0 left-auto rounded-none border-l data-[open]:slide-in-from-right data-[closed]:slide-out-to-right">
+      <DialogPopup className="fixed right-0 top-0 h-full w-full max-w-md translate-x-0 translate-y-0 left-auto rounded-none border-l [&[data-open]]:!animate-none [&[data-closed]]:!animate-none">
         <div className="flex items-center justify-between">
           <DialogTitle>
             {detail ? `TXN-${detail.transactionNumber.slice(-4)}` : 'Transaction'}
