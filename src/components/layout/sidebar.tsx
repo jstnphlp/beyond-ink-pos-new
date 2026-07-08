@@ -21,7 +21,7 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['owner'] },
+  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['owner'] },
   { to: '/new-sale', label: 'New Sale', icon: ShoppingCart, roles: ['owner', 'staff'] },
   { to: '/drafts', label: 'Drafts', icon: FileText, roles: ['owner', 'staff'] },
   { to: '/history', label: 'History', icon: Clock, roles: ['owner', 'staff'] },
@@ -30,7 +30,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/settings', label: 'Settings', icon: Settings, roles: ['owner'] },
 ]
 
-export function Sidebar() {
+export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const { role, displayName, signOut } = useAuth()
 
   const visibleItems = NAV_ITEMS.filter(
@@ -38,7 +38,7 @@ export function Sidebar() {
   )
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-border bg-sidebar">
+    <div className="flex h-full w-64 flex-col border-r border-border bg-sidebar">
       {/* Logo */}
       <div className="flex h-16 items-center gap-2 border-b border-border px-6">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-foreground">
@@ -57,10 +57,11 @@ export function Sidebar() {
           <NavLink
             key={item.to}
             to={item.to}
-            end={item.to === '/'}
+            end={item.to === '/dashboard'}
+            onClick={onNavigate}
             className={({ isActive }) =>
               cn(
-                'group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-default',
+                'group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-default',
                 isActive
                   ? 'bg-sidebar-accent text-sidebar-foreground'
                   : 'text-muted-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-foreground'
@@ -103,6 +104,14 @@ export function Sidebar() {
           <span className="text-xs">Sign out</span>
         </Button>
       </div>
+    </div>
+  )
+}
+
+export function Sidebar() {
+  return (
+    <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 md:block">
+      <SidebarContent />
     </aside>
   )
 }

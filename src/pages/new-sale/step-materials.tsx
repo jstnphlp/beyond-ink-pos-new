@@ -44,7 +44,7 @@ export function StepMaterials() {
             <h3 className="text-sm font-semibold">{ss.service.name}</h3>
 
             {/* Material select + Quantity */}
-            <div className="mt-4 flex items-start gap-3">
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-start">
               {/* Material select */}
               <div className="flex-1">
                 <label className="mb-1.5 block text-xs font-medium text-muted-foreground">

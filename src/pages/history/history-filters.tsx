@@ -23,9 +23,9 @@ export function HistoryFilters({
   onFilterChange: <K extends keyof HistoryFilters>(key: K, value: HistoryFilters[K]) => void
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-3">
+    <div className="flex flex-wrap items-center gap-2 md:gap-3">
       {/* Search */}
-      <div className="relative w-64">
+      <div className="relative w-full sm:w-64">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           placeholder="Search transactions…"
@@ -40,7 +40,7 @@ export function HistoryFilters({
         {STATUS_TABS.map((tab) => (
           <button
             key={tab.value}
-            className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
+            className={`rounded-md px-2 md:px-3 py-1 text-xs font-medium transition-colors ${
               filters.status === tab.value
                 ? 'bg-background text-foreground shadow-sm'
                 : 'text-muted-foreground hover:text-foreground'
@@ -57,7 +57,7 @@ export function HistoryFilters({
         {PAYMENT_TABS.map((tab) => (
           <button
             key={tab.value}
-            className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
+            className={`rounded-md px-2 md:px-3 py-1 text-xs font-medium transition-colors ${
               filters.paymentMethod === tab.value
                 ? 'bg-background text-foreground shadow-sm'
                 : 'text-muted-foreground hover:text-foreground'
@@ -71,7 +71,7 @@ export function HistoryFilters({
 
       {/* Date range */}
       <div className="flex items-center gap-1.5">
-        <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+        <Calendar className="h-3.5 w-3.5 text-muted-foreground hidden sm:block" />
         <input
           type="date"
           className="rounded-md border border-input bg-background px-2 py-1 text-xs text-foreground"

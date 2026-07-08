@@ -29,7 +29,7 @@ export function WalletPage() {
   const combinedTotal = summary?.combinedTotal ?? 0
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Wallet</h1>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -95,7 +95,7 @@ export function WalletPage() {
         ) : (transactions ?? []).length === 0 ? (
           <p className="text-sm text-muted-foreground">No completed sales yet.</p>
         ) : (
-          <div className="rounded-xl border border-border/60 overflow-hidden">
+          <div className="rounded-xl border border-border/60 overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border/60 bg-muted/30">

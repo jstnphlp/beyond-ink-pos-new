@@ -1,4 +1,5 @@
 import { useDashboardStore } from '@/stores/dashboard-store'
+import { useRecentTransactions } from '@/shared/hooks/use-dashboard'
 import { useQuery } from '@tanstack/react-query'
 import { getDrafts } from '@/shared/api/drafts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -18,9 +19,9 @@ const STATUS_STYLES: Record<string, string> = {
 }
 
 const DEPT_DOT: Record<string, string> = {
-  Physical: 'bg-blue-400',
-  Design: 'bg-purple-400',
-  Dev: 'bg-emerald-400',
+  physical_dept: 'bg-blue-400',
+  design_dept: 'bg-purple-400',
+  dev_dept: 'bg-emerald-400',
 }
 
 function formatTime(iso: string) {
@@ -39,10 +40,10 @@ function formatDate(iso: string) {
 }
 
 export function DashboardTabs() {
-  const { transactions, activeTab, setActiveTab } =
-    useDashboardStore()
+  const { activeTab, setActiveTab } = useDashboardStore()
   const navigate = useNavigate()
 
+  const { data: transactions } = useRecentTransactions()
   const { data: drafts } = useQuery({
     queryKey: ['drafts'],
     queryFn: getDrafts,
@@ -57,7 +58,7 @@ export function DashboardTabs() {
         onValueChange={(v) => setActiveTab(v as typeof activeTab)}
       >
         <CardHeader className="pb-0">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle className="text-base font-semibold">
               Activity Overview
             </CardTitle>
@@ -94,23 +95,23 @@ export function DashboardTabs() {
               {(transactions ?? []).map((txn) => (
                 <div
                   key={txn.id}
-                  className="flex items-center justify-between py-3.5 transition-default hover:bg-muted/30 px-2 -mx-2 rounded-lg"
+                  className="flex items-center justify-between gap-2 py-3.5 transition-default hover:bg-muted/30 px-2 -mx-2 rounded-lg"
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 min-w-0 md:gap-3">
                     <div
-                      className={`h-2 w-2 rounded-full ${DEPT_DOT[txn.department]}`}
+                      className={`h-2 w-2 shrink-0 rounded-full ${DEPT_DOT[txn.department] ?? 'bg-zinc-400'}`}
                     />
-                    <div>
-                      <p className="text-sm font-medium">{txn.customer}</p>
-                      <p className="text-xs text-muted-foreground">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{txn.customer}</p>
+                      <p className="text-xs text-muted-foreground truncate">
                         {txn.transactionNumber} · {txn.cashier}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4">
+                  <div className="flex shrink-0 items-center gap-2 md:gap-4">
                     <Badge
                       variant="outline"
-                      className={`border text-[10px] font-semibold uppercase ${STATUS_STYLES[txn.status]}`}
+                      className={`border text-[10px] font-semibold uppercase hidden sm:inline-flex ${STATUS_STYLES[txn.status]}`}
                     >
                       {txn.status}
                     </Badge>
@@ -125,6 +126,11 @@ export function DashboardTabs() {
                   </div>
                 </div>
               ))}
+              {transactions && transactions.length === 0 && (
+                <p className="py-8 text-center text-sm text-muted-foreground">
+                  No recent transactions
+                </p>
+              )}
             </div>
           </TabsContent>
 

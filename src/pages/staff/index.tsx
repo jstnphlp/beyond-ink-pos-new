@@ -245,7 +245,7 @@ function AttendanceLog() {
       </CardHeader>
       <CardContent>
         {/* Filters */}
-        <div className="mb-4 flex flex-wrap items-end gap-3">
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
           <label className="flex flex-col gap-1">
             <span className="text-xs text-muted-foreground">From</span>
             <input
@@ -443,7 +443,7 @@ function SummaryCards() {
 
 export function StaffPage() {
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6 p-4 md:p-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Staff Shifts</h1>
         <p className="mt-1 text-sm text-muted-foreground">
