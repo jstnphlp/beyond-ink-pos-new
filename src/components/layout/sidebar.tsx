@@ -8,6 +8,7 @@ import {
   Settings,
   LogOut,
   Wallet,
+  ChartPie,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/shared/hooks/use-auth'
@@ -26,6 +27,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/drafts', label: 'Drafts', icon: FileText, roles: ['owner', 'staff'] },
   { to: '/history', label: 'History', icon: Clock, roles: ['owner', 'staff'] },
   { to: '/wallet', label: 'Wallet', icon: Wallet, roles: ['owner'] },
+  { to: '/distributions', label: 'Distributions', icon: ChartPie, roles: ['owner'] },
   { to: '/staff', label: 'Staff Shifts', icon: Users, roles: ['owner', 'staff'] },
   { to: '/settings', label: 'Settings', icon: Settings, roles: ['owner'] },
 ]

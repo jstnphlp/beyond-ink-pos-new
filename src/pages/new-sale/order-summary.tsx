@@ -36,6 +36,7 @@ export function OrderSummary() {
     currentStep,
     paymentMethod,
     cashReceived,
+    contributors,
     getSubtotal,
     getDiscountAmount,
     getTotal,
@@ -71,6 +72,7 @@ export function OrderSummary() {
         discountAmount,
         total,
         cashierName,
+        contributors,
       })
       toast.success('Sale completed', {
         description: `Transaction saved — Total: ₱${total.toLocaleString()}`,

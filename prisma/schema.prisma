@@ -164,6 +164,7 @@ model SalesTransaction {
 
   serviceLines   SalesServiceLine[]
   inventoryMovements InventoryMovement[]
+  contributors   TransactionContributor[]
 
   @@map("sales_transactions")
 }
@@ -224,6 +225,7 @@ model StaffMember {
   createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   sessions StaffSession[]
+  contributors TransactionContributor[]
 
   @@map("staff_members")
 }
@@ -242,4 +244,19 @@ model StaffSession {
   @@index([staffMemberId, timeIn])
   @@index([timeOut, timeIn])
   @@map("staff_sessions")
+}
+
+model TransactionContributor {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  transactionId  String   @map("transaction_id") @db.Uuid
+  staffMemberId  String   @map("staff_member_id") @db.Uuid
+  staffName      String   @map("staff_name") @db.Text
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  transaction SalesTransaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  staffMember StaffMember      @relation(fields: [staffMemberId], references: [id])
+
+  @@index([transactionId])
+  @@index([staffMemberId])
+  @@map("transaction_contributors")
 }

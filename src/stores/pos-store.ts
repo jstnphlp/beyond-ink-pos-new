@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { DraftPayload } from '@/shared/api/drafts.types'
+import type { StaffMember } from '@/shared/api/staff.types'
 
 // ─── Types ────────────────────────────────────────────────
 
@@ -269,6 +270,10 @@ interface PosState {
   cashReceived: number
   setCashReceived: (amount: number) => void
 
+  // Contributors (Design/Dev)
+  contributors: StaffMember[]
+  setContributors: (contributors: StaffMember[]) => void
+
   // Computed
   getSubtotal: () => number
   getDiscountAmount: () => number
@@ -354,6 +359,10 @@ export const usePosStore = create<PosState>((set, get) => ({
   cashReceived: 0,
   setCashReceived: (amount) => set({ cashReceived: Math.max(0, amount) }),
 
+  // Contributors
+  contributors: [],
+  setContributors: (contributors) => set({ contributors }),
+
   // Computed
   getSubtotal: () => {
     const { selectedServices } = get()
@@ -405,6 +414,7 @@ export const usePosStore = create<PosState>((set, get) => ({
       discount: { type: 'amount', value: 0 },
       paymentMethod: null,
       cashReceived: 0,
+      contributors: [],
       isProcessing: false,
       currentDraftId: null,
     }),

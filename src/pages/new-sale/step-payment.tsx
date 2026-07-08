@@ -1,7 +1,125 @@
 import { usePosStore } from '@/stores/pos-store'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
-import { Banknote, Smartphone, ArrowDownLeft } from 'lucide-react'
+import { Banknote, Smartphone, ArrowDownLeft, Users } from 'lucide-react'
+import { useStaffMembers } from '@/shared/hooks/use-staff'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import type { StaffMember } from '@/shared/api/staff.types'
+
+function getInitials(name: string): string {
+  return name
+    .split(' ')
+    .map((w) => w[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2)
+}
+
+function ContributorSelector() {
+  const { selectedServices, contributors, setContributors } = usePosStore()
+  const { data: members } = useStaffMembers()
+
+  const hasDesignOrDev = selectedServices.some(
+    (ss) => ss.service.department === 'Design' || ss.service.department === 'Dev'
+  )
+
+  if (!hasDesignOrDev) return null
+
+  const relevantDepts = new Set(
+    selectedServices
+      .filter((ss) => ss.service.department === 'Design' || ss.service.department === 'Dev')
+      .map((ss) =>
+        ss.service.department === 'Design' ? 'design_dept' : 'dev_dept'
+      )
+  )
+
+  const available = (members ?? []).filter(
+    (m) => m.department && relevantDepts.has(m.department)
+  )
+
+  const selectedIds = new Set(contributors.map((c) => c.id))
+
+  function toggle(member: StaffMember) {
+    if (selectedIds.has(member.id)) {
+      setContributors(contributors.filter((c) => c.id !== member.id))
+    } else {
+      setContributors([...contributors, member])
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <Users className="h-4 w-4 text-muted-foreground" />
+        <h3 className="text-sm font-semibold">Contributors</h3>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Select staff who contributed to this sale for revenue distribution.
+      </p>
+
+      {available.length === 0 ? (
+        <p className="rounded-lg border border-dashed border-border/60 bg-muted/20 py-4 text-center text-xs text-muted-foreground">
+          No staff members found for Design/Dev departments.
+        </p>
+      ) : (
+        <div className="space-y-1.5">
+          {available.map((member) => {
+            const isSelected = selectedIds.has(member.id)
+            return (
+              <button
+                key={member.id}
+                type="button"
+                onClick={() => toggle(member)}
+                className={cn(
+                  'flex w-full items-center gap-3 rounded-lg border p-2.5 text-left transition-colors',
+                  isSelected
+                    ? 'border-brand/40 bg-brand/5'
+                    : 'border-border/60 bg-card hover:border-border hover:bg-muted/30'
+                )}
+              >
+                <div
+                  className={cn(
+                    'flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors',
+                    isSelected
+                      ? 'border-brand bg-brand text-white'
+                      : 'border-muted-foreground/40 bg-transparent'
+                  )}
+                >
+                  {isSelected && (
+                    <svg
+                      className="h-3 w-3"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={3}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                  )}
+                </div>
+                <Avatar className="h-7 w-7 border border-border">
+                  <AvatarFallback className="bg-muted text-[10px] font-semibold">
+                    {getInitials(member.name)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{member.name}</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    {member.department === 'design_dept' ? 'Design' : 'Dev'}
+                  </p>
+                </div>
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
 
 export function StepPayment() {
   const {
@@ -34,6 +152,9 @@ export function StepPayment() {
           ₱{total.toLocaleString()}
         </p>
       </div>
+
+      {/* Contributor Selector (Design/Dev only) */}
+      <ContributorSelector />
 
       {/* Payment Method Selection */}
       <div className="grid grid-cols-2 gap-3">
