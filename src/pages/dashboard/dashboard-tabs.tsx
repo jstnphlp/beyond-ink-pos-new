@@ -91,7 +91,7 @@ export function DashboardTabs() {
           {/* Recent Transactions */}
           <TabsContent value="transactions" className="mt-0">
             <div className="space-y-0 divide-y divide-border/50">
-              {transactions.map((txn) => (
+              {(transactions ?? []).map((txn) => (
                 <div
                   key={txn.id}
                   className="flex items-center justify-between py-3.5 transition-default hover:bg-muted/30 px-2 -mx-2 rounded-lg"

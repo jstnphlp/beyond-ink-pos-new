@@ -38,7 +38,7 @@ export function SummaryCards() {
 
   return (
     <div className="grid gap-4 md:grid-cols-3">
-      {summaries.map((summary) => {
+      {(summaries ?? []).map((summary) => {
         const Icon = ICON_MAP[summary.icon] ?? Printer
         const style = DEPARTMENT_STYLES[summary.department]
 
