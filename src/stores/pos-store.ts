@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import type { DraftPayload } from '@/shared/api/drafts.types'
 
 // ─── Types ────────────────────────────────────────────────
 
@@ -277,6 +278,13 @@ interface PosState {
   resetSale: () => void
   isProcessing: boolean
   setIsProcessing: (v: boolean) => void
+
+  // Draft
+  currentDraftId: string | null
+  setCurrentDraftId: (id: string | null) => void
+  loadDraft: (id: string, payload: DraftPayload) => void
+  isSavingDraft: boolean
+  setIsSavingDraft: (v: boolean) => void
 }
 
 export const usePosStore = create<PosState>((set, get) => ({
@@ -386,5 +394,24 @@ export const usePosStore = create<PosState>((set, get) => ({
       cashReceived: 0,
       gcashRef: '',
       isProcessing: false,
+      currentDraftId: null,
     }),
+
+  // Draft
+  currentDraftId: null,
+  setCurrentDraftId: (id) => set({ currentDraftId: id }),
+  loadDraft: (id, payload) =>
+    set({
+      currentDraftId: id,
+      currentStep: payload.currentStep,
+      selectedServices: payload.selectedServices,
+      delivery: payload.delivery,
+      discount: payload.discount,
+      paymentMethod: null,
+      cashReceived: 0,
+      gcashRef: '',
+      isProcessing: false,
+    }),
+  isSavingDraft: false,
+  setIsSavingDraft: (v) => set({ isSavingDraft: v }),
 }))

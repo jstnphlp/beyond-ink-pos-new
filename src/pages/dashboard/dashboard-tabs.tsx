@@ -1,8 +1,12 @@
 import { useDashboardStore } from '@/stores/dashboard-store'
+import { useQuery } from '@tanstack/react-query'
+import { getDrafts } from '@/shared/api/drafts'
+import type { DraftRecord } from '@/shared/api/drafts.types'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { Receipt, FileText, Users } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 
 const STATUS_STYLES: Record<string, string> = {
   completed: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25',
@@ -35,8 +39,14 @@ function formatDate(iso: string) {
 }
 
 export function DashboardTabs() {
-  const { transactions, drafts, staffSessions, activeTab, setActiveTab } =
+  const { transactions, staffSessions, activeTab, setActiveTab } =
     useDashboardStore()
+  const navigate = useNavigate()
+
+  const { data: drafts } = useQuery({
+    queryKey: ['drafts'],
+    queryFn: getDrafts,
+  })
 
   return (
     <Card className="border-border/50">
@@ -119,28 +129,38 @@ export function DashboardTabs() {
           {/* Saved Drafts */}
           <TabsContent value="drafts" className="mt-0">
             <div className="space-y-0 divide-y divide-border/50">
-              {drafts.map((draft) => (
-                <div
-                  key={draft.id}
-                  className="flex items-center justify-between py-3.5 transition-default hover:bg-muted/30 px-2 -mx-2 rounded-lg"
-                >
-                  <div>
-                    <p className="text-sm font-medium">{draft.draftNumber}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {draft.services.join(', ')} · {draft.cashier}
-                    </p>
+              {(drafts ?? []).map((draft) => {
+                const services = draft.draftPayload.selectedServices.map((ss) => ss.service.name)
+                const label = draft.draftPayload.name || `DRF-${draft.transactionNumber.slice(-4)}`
+                return (
+                  <div
+                    key={draft.id}
+                    className="flex items-center justify-between py-3.5 transition-default hover:bg-muted/30 px-2 -mx-2 rounded-lg cursor-pointer"
+                    onClick={() => navigate(`/new-sale?draftId=${draft.id}`)}
+                  >
+                    <div>
+                      <p className="text-sm font-medium">{label}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {services.join(', ') || 'No services'} · {draft.cashierName}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-semibold tabular-nums">
+                        ₱{draft.finalTotal.toLocaleString()}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {formatDate(draft.createdAt)}{' '}
+                        {formatTime(draft.createdAt)}
+                      </p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-semibold tabular-nums">
-                      ₱{draft.subtotal.toLocaleString()}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground">
-                      {formatDate(draft.createdAt)}{' '}
-                      {formatTime(draft.createdAt)}
-                    </p>
-                  </div>
-                </div>
-              ))}
+                )
+              })}
+              {drafts && drafts.length === 0 && (
+                <p className="py-8 text-center text-sm text-muted-foreground">
+                  No saved drafts
+                </p>
+              )}
             </div>
           </TabsContent>
 
