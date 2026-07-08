@@ -26,3 +26,6 @@ generated/prisma
 *.sw?
 
 /generated/prisma
+
+# Supabase local config (contains OAuth secrets)
+supabase/config.toml

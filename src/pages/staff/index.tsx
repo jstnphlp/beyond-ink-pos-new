@@ -1,27 +1,453 @@
-import { Users, Clock as ClockIcon } from 'lucide-react'
+import { useState } from 'react'
+import { Users, LogIn, LogOut, History, Timer } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Dialog,
+  DialogTrigger,
+  DialogPopup,
+  DialogTitle,
+  DialogDescription,
+  DialogClose,
+} from '@/components/ui/dialog'
+import {
+  useStaffMembers,
+  useActiveSessions,
+  useAttendance,
+  useClockIn,
+  useClockOut,
+} from '@/shared/hooks/use-staff'
+import { useStaffStore } from '@/stores/staff-store'
+import type { StaffMember } from '@/shared/api/staff.types'
 
-const STATUS_STYLES: Record<string, string> = {
-  active: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25',
-  break: 'bg-amber-500/15 text-amber-400 border-amber-500/25',
-  offline: 'bg-zinc-500/15 text-zinc-400 border-zinc-500/25',
+function formatTime(iso: string) {
+  return new Date(iso).toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  })
 }
 
-const DEPT_DOT: Record<string, string> = {
-  Physical: 'bg-blue-400',
-  Design: 'bg-purple-400',
-  Dev: 'bg-emerald-400',
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  })
 }
 
-const MOCK_STAFF = [
-  { name: 'Juan Carlos', email: 'juan@beyondink.ph', dept: 'Physical', clockIn: '6:00 AM', status: 'active', initials: 'JC' },
-  { name: 'Ana Martinez', email: 'ana@beyondink.ph', dept: 'Design', clockIn: '7:00 AM', status: 'active', initials: 'AM' },
-  { name: 'Rico Mendoza', email: 'rico@beyondink.ph', dept: 'Dev', clockIn: '8:00 AM', status: 'break', initials: 'RM' },
-  { name: 'Kim Santos', email: 'kim@beyondink.ph', dept: 'Physical', clockIn: '6:30 AM', status: 'active', initials: 'KS' },
-  { name: 'Diana Lopez', email: 'diana@beyondink.ph', dept: 'Design', clockIn: '—', status: 'offline', initials: 'DL' },
-]
+function calcHours(timeIn: string, timeOut: string): number {
+  const ms = new Date(timeOut).getTime() - new Date(timeIn).getTime()
+  return Math.round((ms / (1000 * 60 * 60)) * 100) / 100
+}
+
+function getInitials(name: string): string {
+  return name
+    .split(' ')
+    .map((w) => w[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2)
+}
+
+function getDefaultDateFrom(): string {
+  const d = new Date()
+  d.setDate(d.getDate() - 7)
+  return d.toISOString().split('T')[0]
+}
+
+function getDefaultDateTo(): string {
+  return new Date().toISOString().split('T')[0]
+}
+
+// ─── Clock-In Dialog ─────────────────────────────────────────────────────────
+
+function ClockInDialog() {
+  const { data: members, isLoading } = useStaffMembers()
+  const { data: activeSessions } = useActiveSessions()
+  const clockInMutation = useClockIn()
+  const [open, setOpen] = useState(false)
+
+  const activeIds = new Set((activeSessions ?? []).map((s) => s.staffMemberId))
+  const available = (members ?? []).filter((m) => !activeIds.has(m.id))
+
+  function handleClockIn(member: StaffMember) {
+    clockInMutation.mutate(
+      { staffMemberId: member.id, staffName: member.name },
+      { onSuccess: () => setOpen(false) },
+    )
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger
+        render={<Button size="sm" className="gap-1.5" />}
+      >
+        <LogIn className="h-3.5 w-3.5" />
+        Time In
+      </DialogTrigger>
+      <DialogPopup>
+        <DialogTitle>Clock In Staff</DialogTitle>
+        <DialogDescription>
+          Select a staff member to start their shift.
+        </DialogDescription>
+
+        <div className="mt-4 space-y-2">
+          {isLoading && (
+            <>
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+            </>
+          )}
+          {available.length === 0 && !isLoading && (
+            <p className="py-4 text-center text-sm text-muted-foreground">
+              All staff are already clocked in.
+            </p>
+          )}
+          {available.map((member) => (
+            <button
+              key={member.id}
+              type="button"
+              className="flex w-full items-center gap-3 rounded-lg border border-border p-3 text-left transition-colors hover:bg-muted/50 disabled:opacity-50"
+              disabled={clockInMutation.isPending}
+              onClick={() => handleClockIn(member)}
+            >
+              <Avatar className="h-8 w-8 border border-border">
+                <AvatarFallback className="bg-muted text-xs font-semibold">
+                  {getInitials(member.name)}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1">
+                <p className="text-sm font-medium">{member.name}</p>
+                <p className="text-xs text-muted-foreground capitalize">
+                  {member.department.replace('_dept', '')}
+                </p>
+              </div>
+              <LogIn className="h-4 w-4 text-emerald-400" />
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-4 flex justify-end">
+          <DialogClose render={<Button variant="ghost" size="sm" />}>
+            Cancel
+          </DialogClose>
+        </div>
+      </DialogPopup>
+    </Dialog>
+  )
+}
+
+// ─── Active Sessions Panel ───────────────────────────────────────────────────
+
+function ActiveSessionsPanel() {
+  const { data: sessions, isLoading } = useActiveSessions()
+  const clockOutMutation = useClockOut()
+
+  return (
+    <Card className="border-border/50">
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Users className="h-4 w-4 text-brand" />
+            Active Sessions
+          </CardTitle>
+          <ClockInDialog />
+        </div>
+      </CardHeader>
+      <CardContent>
+        {isLoading && (
+          <div className="space-y-2">
+            <Skeleton className="h-14 w-full" />
+            <Skeleton className="h-14 w-full" />
+          </div>
+        )}
+        {!isLoading && (sessions ?? []).length === 0 && (
+          <p className="py-6 text-center text-sm text-muted-foreground">
+            No staff currently clocked in.
+          </p>
+        )}
+        <div className="space-y-0 divide-y divide-border/40">
+          {(sessions ?? []).map((session) => (
+            <div
+              key={session.id}
+              className="flex items-center justify-between py-3.5 transition-default hover:bg-muted/30 px-2 -mx-2 rounded-lg"
+            >
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <Avatar className="h-9 w-9 border border-border">
+                    <AvatarFallback className="bg-muted text-xs font-semibold">
+                      {getInitials(session.staffName)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-background bg-emerald-500" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium">{session.staffName}</p>
+                  <p className="text-xs text-muted-foreground">
+                    on shift since {formatTime(session.timeIn)}
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="destructive"
+                size="sm"
+                className="gap-1"
+                disabled={clockOutMutation.isPending}
+                onClick={() => clockOutMutation.mutate(session.staffMemberId)}
+              >
+                <LogOut className="h-3 w-3" />
+                Time Out
+              </Button>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+// ─── Attendance Log ──────────────────────────────────────────────────────────
+
+function AttendanceLog() {
+  const { attendanceFilters, setAttendanceFilters } = useStaffStore()
+  const { data: members } = useStaffMembers()
+  const [dateFrom, setDateFrom] = useState(getDefaultDateFrom)
+  const [dateTo, setDateTo] = useState(getDefaultDateTo)
+  const [staffFilter, setStaffFilter] = useState<string>('all')
+  const [appliedFilters, setAppliedFilters] = useState(attendanceFilters)
+
+  const { data, isLoading, isFetching } = useAttendance(appliedFilters)
+
+  function handleFilter() {
+    const filters = {
+      staffMemberId: staffFilter,
+      dateFrom: dateFrom ? `${dateFrom}T00:00:00.000Z` : null,
+      dateTo: dateTo || null,
+    }
+    setAttendanceFilters(filters)
+    setAppliedFilters(filters)
+  }
+
+  const sessions = data?.sessions ?? []
+
+  // Summary hours
+  const hoursByName: Record<string, number> = {}
+  for (const s of sessions) {
+    if (s.timeOut) {
+      hoursByName[s.staffName] =
+        (hoursByName[s.staffName] ?? 0) + calcHours(s.timeIn, s.timeOut)
+    }
+  }
+
+  return (
+    <Card className="border-border/50">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <History className="h-4 w-4 text-brand" />
+          Attendance Log
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {/* Filters */}
+        <div className="mb-4 flex flex-wrap items-end gap-3">
+          <label className="flex flex-col gap-1">
+            <span className="text-xs text-muted-foreground">From</span>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="h-8 rounded-lg border border-border bg-background px-2.5 text-sm"
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs text-muted-foreground">To</span>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="h-8 rounded-lg border border-border bg-background px-2.5 text-sm"
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs text-muted-foreground">Staff</span>
+            <select
+              value={staffFilter}
+              onChange={(e) => setStaffFilter(e.target.value)}
+              className="h-8 rounded-lg border border-border bg-background px-2.5 text-sm"
+            >
+              <option value="all">All Staff</option>
+              {(members ?? []).map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <Button
+            size="sm"
+            onClick={handleFilter}
+            disabled={isFetching}
+          >
+            Filter
+          </Button>
+        </div>
+
+        {/* Summary */}
+        {Object.keys(hoursByName).length > 0 && (
+          <div className="mb-4 flex flex-wrap gap-2">
+            {Object.entries(hoursByName).map(([name, hours]) => (
+              <Badge
+                key={name}
+                variant="outline"
+                className="border-border/50 bg-muted/30 px-2.5 py-1 text-xs font-medium"
+              >
+                {name}: {hours.toFixed(1)}h
+              </Badge>
+            ))}
+          </div>
+        )}
+
+        {/* Table */}
+        {isLoading ? (
+          <div className="space-y-2">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+        ) : sessions.length === 0 ? (
+          <p className="py-6 text-center text-sm text-muted-foreground">
+            No attendance records found.
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border/50 text-left text-xs text-muted-foreground">
+                  <th className="pb-2 pr-4 font-medium">Date</th>
+                  <th className="pb-2 pr-4 font-medium">Staff</th>
+                  <th className="pb-2 pr-4 font-medium">Time In</th>
+                  <th className="pb-2 pr-4 font-medium">Time Out</th>
+                  <th className="pb-2 font-medium">Hours</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/30">
+                {sessions.map((s) => {
+                  const hours = s.timeOut ? calcHours(s.timeIn, s.timeOut) : null
+                  return (
+                    <tr
+                      key={s.id}
+                      className={s.autoLoggedOut ? 'bg-destructive/5' : undefined}
+                    >
+                      <td className="py-2.5 pr-4 text-muted-foreground">
+                        {formatDate(s.timeIn)}
+                      </td>
+                      <td className="py-2.5 pr-4 font-medium">{s.staffName}</td>
+                      <td className="py-2.5 pr-4">{formatTime(s.timeIn)}</td>
+                      <td className="py-2.5 pr-4">
+                        {s.timeOut ? formatTime(s.timeOut) : '—'}
+                        {s.autoLoggedOut && (
+                          <Badge
+                            variant="outline"
+                            className="ml-1.5 border-destructive/30 bg-destructive/10 text-[10px] text-destructive"
+                          >
+                            auto
+                          </Badge>
+                        )}
+                      </td>
+                      <td className="py-2.5 tabular-nums">
+                        {hours !== null ? `${hours.toFixed(1)}h` : '—'}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Load More */}
+        {data?.nextCursor && (
+          <div className="mt-4 text-center">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setAppliedFilters((prev) => ({
+                  ...prev,
+                  _cursor: data.nextCursor,
+                }))
+              }}
+            >
+              Load More
+            </Button>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+// ─── Summary Cards ───────────────────────────────────────────────────────────
+
+function SummaryCards() {
+  const { data: sessions, isLoading } = useActiveSessions()
+
+  if (isLoading) {
+    return (
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Skeleton className="h-24" />
+        <Skeleton className="h-24" />
+        <Skeleton className="h-24" />
+      </div>
+    )
+  }
+
+  const activeCount = (sessions ?? []).length
+  const totalHoursToday = (sessions ?? []).reduce((sum, s) => {
+    const end = s.timeOut ?? new Date().toISOString()
+    return sum + calcHours(s.timeIn, end)
+  }, 0)
+
+  return (
+    <div className="grid gap-4 sm:grid-cols-3">
+      <Card className="border-border/50">
+        <CardContent className="p-5 text-center">
+          <p className="text-3xl font-bold text-emerald-400">{activeCount}</p>
+          <p className="mt-1 text-xs text-muted-foreground">Active Now</p>
+        </CardContent>
+      </Card>
+      <Card className="border-border/50">
+        <CardContent className="p-5 text-center">
+          <p className="text-3xl font-bold text-blue-400">
+            {totalHoursToday.toFixed(1)}h
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">Hours Today</p>
+        </CardContent>
+      </Card>
+      <Card className="border-border/50">
+        <CardContent className="p-5 text-center">
+          <div className="flex items-center justify-center gap-1.5">
+            <Timer className="h-5 w-5 text-muted-foreground" />
+            <p className="text-lg font-semibold tabular-nums">
+              {new Date().toLocaleTimeString('en-US', {
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true,
+              })}
+            </p>
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">Current Time</p>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+// ─── Page ────────────────────────────────────────────────────────────────────
 
 export function StaffPage() {
   return (
@@ -29,77 +455,13 @@ export function StaffPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Staff Shifts</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Monitor who's clocked in and their current status.
+          Monitor who's clocked in and manage shifts.
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Card className="border-border/50">
-          <CardContent className="p-5 text-center">
-            <p className="text-3xl font-bold text-emerald-400">3</p>
-            <p className="mt-1 text-xs text-muted-foreground">Active Now</p>
-          </CardContent>
-        </Card>
-        <Card className="border-border/50">
-          <CardContent className="p-5 text-center">
-            <p className="text-3xl font-bold text-amber-400">1</p>
-            <p className="mt-1 text-xs text-muted-foreground">On Break</p>
-          </CardContent>
-        </Card>
-        <Card className="border-border/50">
-          <CardContent className="p-5 text-center">
-            <p className="text-3xl font-bold text-zinc-400">1</p>
-            <p className="mt-1 text-xs text-muted-foreground">Offline</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card className="border-border/50">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Users className="h-4 w-4 text-brand" />
-            Staff Members
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-0 divide-y divide-border/40">
-            {MOCK_STAFF.map((staff) => (
-              <div
-                key={staff.email}
-                className="flex items-center justify-between py-3.5 transition-default hover:bg-muted/30 px-2 -mx-2 rounded-lg"
-              >
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-9 w-9 border border-border">
-                    <AvatarFallback className="bg-muted text-xs font-semibold">
-                      {staff.initials}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium">{staff.name}</p>
-                      <div className={`h-1.5 w-1.5 rounded-full ${DEPT_DOT[staff.dept]}`} />
-                      <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{staff.dept}</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground">{staff.email}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <Badge
-                    variant="outline"
-                    className={`border text-[10px] font-semibold uppercase ${STATUS_STYLES[staff.status]}`}
-                  >
-                    {staff.status}
-                  </Badge>
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <ClockIcon className="h-3 w-3" />
-                    {staff.clockIn}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      <SummaryCards />
+      <ActiveSessionsPanel />
+      <AttendanceLog />
     </div>
   )
 }

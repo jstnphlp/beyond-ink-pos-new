@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
+import { useAuth } from '@/shared/hooks/use-auth'
 import {
   Receipt,
   Save,
@@ -26,6 +27,8 @@ import {
 
 export function OrderSummary() {
   const queryClient = useQueryClient()
+  const { displayName } = useAuth()
+  const cashierName = displayName ?? 'Staff'
   const {
     selectedServices,
     delivery,
@@ -33,11 +36,9 @@ export function OrderSummary() {
     currentStep,
     paymentMethod,
     cashReceived,
-    gcashRef,
     getSubtotal,
     getDiscountAmount,
     getTotal,
-    getChangeDue,
     isCompletable,
     isProcessing,
     setIsProcessing,
@@ -66,10 +67,10 @@ export function OrderSummary() {
         discount,
         paymentMethod,
         cashReceived,
-        gcashRef,
         subtotal,
         discountAmount,
         total,
+        cashierName,
       })
       toast.success('Sale completed', {
         description: `Transaction saved — Total: ₱${total.toLocaleString()}`,
@@ -97,6 +98,7 @@ export function OrderSummary() {
         currentStep,
         subtotal,
         total,
+        cashierName,
       }
 
       if (currentDraftId) {
@@ -142,7 +144,7 @@ export function OrderSummary() {
           <div>
             <h3 className="text-sm font-bold">Transaction Draft</h3>
             <p className="text-[11px] text-muted-foreground">
-              Cashier: Juan Carlos
+              Cashier: {cashierName}
             </p>
           </div>
         </div>

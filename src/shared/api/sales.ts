@@ -72,10 +72,10 @@ interface CompleteSaleParams {
   discount: Discount
   paymentMethod: PaymentMethod
   cashReceived: number
-  gcashRef: string
   subtotal: number
   discountAmount: number
   total: number
+  cashierName?: string
 }
 
 export async function completeSale(params: CompleteSaleParams) {
@@ -87,6 +87,7 @@ export async function completeSale(params: CompleteSaleParams) {
     cashReceived,
     subtotal,
     total,
+    cashierName = 'Staff',
   } = params
 
   await ensureCatalogSynced()
@@ -123,6 +124,7 @@ export async function completeSale(params: CompleteSaleParams) {
     p_cash_received: paymentMethod === 'cash' ? cashReceived : null,
     p_gcash_amount_paid: paymentMethod === 'gcash' ? total : null,
     p_change_due: paymentMethod === 'cash' ? changeDue : null,
+    p_cashier_name: cashierName,
   })
 
   if (error) throw error

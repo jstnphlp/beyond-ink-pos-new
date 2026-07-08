@@ -1,4 +1,4 @@
-import type { Service, SelectedService, DeliveryInfo, Discount } from '@/stores/pos-store'
+import type { Service, DeliveryInfo, Discount } from '@/stores/pos-store'
 
 export interface DraftPayload {
   name?: string

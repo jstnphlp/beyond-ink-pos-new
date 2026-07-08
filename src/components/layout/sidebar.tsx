@@ -6,19 +6,37 @@ import {
   Clock,
   Users,
   Settings,
+  LogOut,
+  Wallet,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useAuth } from '@/shared/hooks/use-auth'
+import { Button } from '@/components/ui/button'
 
-const NAV_ITEMS = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/new-sale', label: 'New Sale', icon: ShoppingCart },
-  { to: '/drafts', label: 'Drafts', icon: FileText },
-  { to: '/history', label: 'History', icon: Clock },
-  { to: '/staff', label: 'Staff Shifts', icon: Users },
-  { to: '/settings', label: 'Settings', icon: Settings },
+interface NavItem {
+  to: string
+  label: string
+  icon: React.ComponentType<{ className?: string }>
+  roles: ('owner' | 'staff')[]
+}
+
+const NAV_ITEMS: NavItem[] = [
+  { to: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['owner'] },
+  { to: '/new-sale', label: 'New Sale', icon: ShoppingCart, roles: ['owner', 'staff'] },
+  { to: '/drafts', label: 'Drafts', icon: FileText, roles: ['owner', 'staff'] },
+  { to: '/history', label: 'History', icon: Clock, roles: ['owner', 'staff'] },
+  { to: '/wallet', label: 'Wallet', icon: Wallet, roles: ['owner'] },
+  { to: '/staff', label: 'Staff Shifts', icon: Users, roles: ['owner', 'staff'] },
+  { to: '/settings', label: 'Settings', icon: Settings, roles: ['owner'] },
 ]
 
 export function Sidebar() {
+  const { role, displayName, signOut } = useAuth()
+
+  const visibleItems = NAV_ITEMS.filter(
+    (item) => role && item.roles.includes(role)
+  )
+
   return (
     <aside className="fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-border bg-sidebar">
       {/* Logo */}
@@ -35,7 +53,7 @@ export function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex flex-1 flex-col gap-1 px-3 py-4">
-        {NAV_ITEMS.map((item) => (
+        {visibleItems.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
@@ -67,11 +85,23 @@ export function Sidebar() {
         ))}
       </nav>
 
-      {/* Footer */}
-      <div className="border-t border-border px-4 py-3">
-        <p className="text-[10px] font-medium tracking-widest text-muted-foreground uppercase">
-          Beyond Ink POS v1.0
+      {/* User + Sign out */}
+      <div className="border-t border-border px-4 py-3 space-y-2">
+        <p className="truncate text-xs font-medium text-foreground">
+          {displayName}
         </p>
+        <p className="text-[10px] font-medium tracking-widest text-muted-foreground uppercase">
+          {role === 'owner' ? 'Owner' : 'Staff'}
+        </p>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={signOut}
+          className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground"
+        >
+          <LogOut className="h-3.5 w-3.5" />
+          <span className="text-xs">Sign out</span>
+        </Button>
       </div>
     </aside>
   )
