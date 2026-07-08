@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import {
   getStaffMembers,
@@ -10,8 +10,6 @@ import {
 } from '@/shared/api/staff'
 import type { StaffSession, AttendanceFilters } from '@/shared/api/staff.types'
 
-// ─── Query Keys ──────────────────────────────────────────────────────────────
-
 export const staffKeys = {
   all: ['staff'] as const,
   members: () => [...staffKeys.all, 'members'] as const,
@@ -20,14 +18,13 @@ export const staffKeys = {
     [...staffKeys.all, 'attendance', filters] as const,
 }
 
-// ─── Query Hooks ─────────────────────────────────────────────────────────────
-
 export function useStaffMembers() {
   return useQuery({
     queryKey: staffKeys.members(),
     queryFn: getStaffMembers,
-    staleTime: 10 * 60_000, // 10min — staff list rarely changes
-    gcTime: 30 * 60_000,
+    staleTime: 30 * 60_000,
+    gcTime: 60 * 60_000,
+    placeholderData: keepPreviousData,
   })
 }
 
@@ -35,9 +32,10 @@ export function useActiveSessions() {
   return useQuery({
     queryKey: staffKeys.activeSessions(),
     queryFn: getActiveSessions,
-    staleTime: 10_000, // 10s
-    refetchInterval: 30_000, // 30s background refresh
-    gcTime: 5 * 60_000,
+    staleTime: 2 * 60_000,
+    gcTime: 30 * 60_000,
+    placeholderData: keepPreviousData,
+    refetchOnWindowFocus: true,
   })
 }
 
@@ -45,12 +43,11 @@ export function useAttendance(filters: AttendanceFilters) {
   return useQuery({
     queryKey: staffKeys.attendance(filters),
     queryFn: () => getAttendance(filters),
-    staleTime: 30_000,
-    gcTime: 5 * 60_000,
+    staleTime: 5 * 60_000,
+    gcTime: 30 * 60_000,
+    placeholderData: keepPreviousData,
   })
 }
-
-// ─── Mutation Hooks ──────────────────────────────────────────────────────────
 
 export function useClockIn() {
   const queryClient = useQueryClient()
@@ -66,7 +63,6 @@ export function useClockIn() {
 
       queryClient.setQueryData<StaffSession[]>(staffKeys.activeSessions(), (old) => {
         if (!old) return old
-        // Don't add if already present
         if (old.some((s) => s.staffMemberId === staffMemberId)) return old
         return [
           ...old,

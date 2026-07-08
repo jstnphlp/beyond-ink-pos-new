@@ -8,6 +8,8 @@ import type {
 
 const PAGE_SIZE = 20
 
+let staleCleanupDone = false
+
 export async function getStaffMembers(): Promise<StaffMember[]> {
   const { data, error } = await supabase
     .from('staff_members')
@@ -27,15 +29,18 @@ export async function getStaffMembers(): Promise<StaffMember[]> {
 }
 
 export async function getActiveSessions(): Promise<StaffSession[]> {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-
-  // Close stale sessions from previous days (safety net alongside pg_cron)
-  await supabase
-    .from('staff_sessions')
-    .update({ time_out: new Date().toISOString(), auto_logged_out: true })
-    .is('time_out', null)
-    .lt('time_in', today.toISOString())
+  // Stale session cleanup — runs ONCE per page load, not on every fetch
+  if (!staleCleanupDone) {
+    staleCleanupDone = true
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    supabase
+      .from('staff_sessions')
+      .update({ time_out: new Date().toISOString(), auto_logged_out: true })
+      .is('time_out', null)
+      .lt('time_in', today.toISOString())
+      .then(() => {})
+  }
 
   const { data, error } = await supabase
     .from('staff_sessions')
@@ -49,7 +54,6 @@ export async function getActiveSessions(): Promise<StaffSession[]> {
 }
 
 export async function clockIn(staffMemberId: string, staffName: string): Promise<StaffSession> {
-  // Check for existing active session
   const { data: existing } = await supabase
     .from('staff_sessions')
     .select('id')
@@ -58,7 +62,6 @@ export async function clockIn(staffMemberId: string, staffName: string): Promise
     .maybeSingle()
 
   if (existing) {
-    // Already clocked in — return existing session
     const { data } = await supabase
       .from('staff_sessions')
       .select('id, staff_member_id, staff_name, time_in, time_out, auto_logged_out, created_at')
@@ -112,7 +115,6 @@ export async function getAttendance(
     query = query.lte('time_in', `${filters.dateTo}T23:59:59.999Z`)
   }
 
-  // Cursor-based pagination
   if (cursor) {
     query = query.or(
       `time_in.lt.${cursor.timeIn},and(time_in.eq.${cursor.timeIn},id.lt.${cursor.id})`,

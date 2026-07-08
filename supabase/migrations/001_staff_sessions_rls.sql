@@ -1,5 +1,30 @@
--- Staff sessions RLS policies + auto-logout function
+-- Staff sessions RLS policies + grants + auto-logout function
 -- Run this after the Prisma migration has created the tables
+-- This fixes permissions that prisma migrate reset wipes out
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- Schema-level grants (required for PostgREST / Supabase REST API)
+-- prisma migrate reset wipes these, so they must be restored
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+GRANT USAGE ON SCHEMA public TO anon;
+GRANT USAGE ON SCHEMA public TO authenticated;
+GRANT USAGE ON SCHEMA public TO service_role;
+
+GRANT ALL ON ALL TABLES IN SCHEMA public TO anon;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO authenticated;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role;
+
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO authenticated;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO service_role;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO authenticated;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO anon;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO authenticated;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO service_role;
 
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- RLS Policies — open access for shared physical login (no auth)
