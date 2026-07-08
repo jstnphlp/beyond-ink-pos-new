@@ -1,9 +1,21 @@
-import { createBrowserRouter, RouterProvider } from 'react-router-dom'
+import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom'
 import { AppLayout } from '@/components/layout/app-layout'
+import { AuthGuard } from '@/components/auth/auth-guard'
 
 const router = createBrowserRouter([
   {
-    element: <AppLayout />,
+    path: '/login',
+    lazy: async () => {
+      const { LoginPage } = await import('@/pages/login')
+      return { Component: LoginPage }
+    },
+  },
+  {
+    element: (
+      <AuthGuard>
+        <AppLayout />
+      </AuthGuard>
+    ),
     children: [
       {
         path: '/',
@@ -48,6 +60,10 @@ const router = createBrowserRouter([
         },
       },
     ],
+  },
+  {
+    path: '*',
+    element: <Navigate to="/" replace />,
   },
 ])
 

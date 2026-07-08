@@ -28,29 +28,36 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO service_role
 
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- RLS Policies — open access for shared physical login (no auth)
+-- Uses EXECUTE to avoid errors when tables don't exist yet
 -- ═══════════════════════════════════════════════════════════════════════════════
 
-ALTER TABLE public.staff_members ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.staff_sessions ENABLE ROW LEVEL SECURITY;
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'staff_members') THEN
+    EXECUTE 'ALTER TABLE public.staff_members ENABLE ROW LEVEL SECURITY';
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'staff_members_select_all' AND tablename = 'staff_members') THEN
+      EXECUTE 'CREATE POLICY "staff_members_select_all" ON public.staff_members FOR SELECT USING (true)';
+    END IF;
+  END IF;
+END
+$$;
 
--- staff_members: full read access (staff list for clock-in UI)
-CREATE POLICY "staff_members_select_all"
-ON public.staff_members FOR SELECT
-USING (true);
-
--- staff_sessions: full read/write (clock in/out, attendance queries)
-CREATE POLICY "staff_sessions_select_all"
-ON public.staff_sessions FOR SELECT
-USING (true);
-
-CREATE POLICY "staff_sessions_insert_all"
-ON public.staff_sessions FOR INSERT
-WITH CHECK (true);
-
-CREATE POLICY "staff_sessions_update_all"
-ON public.staff_sessions FOR UPDATE
-USING (true)
-WITH CHECK (true);
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'staff_sessions') THEN
+    EXECUTE 'ALTER TABLE public.staff_sessions ENABLE ROW LEVEL SECURITY';
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'staff_sessions_select_all' AND tablename = 'staff_sessions') THEN
+      EXECUTE 'CREATE POLICY "staff_sessions_select_all" ON public.staff_sessions FOR SELECT USING (true)';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'staff_sessions_insert_all' AND tablename = 'staff_sessions') THEN
+      EXECUTE 'CREATE POLICY "staff_sessions_insert_all" ON public.staff_sessions FOR INSERT WITH CHECK (true)';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'staff_sessions_update_all' AND tablename = 'staff_sessions') THEN
+      EXECUTE 'CREATE POLICY "staff_sessions_update_all" ON public.staff_sessions FOR UPDATE USING (true) WITH CHECK (true)';
+    END IF;
+  END IF;
+END
+$$;
 
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- Auto-logout function — closes all open sessions at 9PM PHT

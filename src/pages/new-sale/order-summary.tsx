@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/dialog'
 import { toast } from 'sonner'
 import { useQueryClient } from '@tanstack/react-query'
-import { useActiveSessions } from '@/shared/hooks/use-staff'
+import { useAuth } from '@/shared/hooks/use-auth'
 import {
   Receipt,
   Save,
@@ -27,7 +27,8 @@ import {
 
 export function OrderSummary() {
   const queryClient = useQueryClient()
-  const { data: activeSessions } = useActiveSessions()
+  const { displayName } = useAuth()
+  const cashierName = displayName ?? 'Staff'
   const {
     selectedServices,
     delivery,
@@ -51,8 +52,6 @@ export function OrderSummary() {
 
   const [draftName, setDraftName] = useState('')
   const [dialogOpen, setDialogOpen] = useState(false)
-
-  const cashierName = (activeSessions ?? []).map((s) => s.staffName).join(', ') || 'Staff'
 
   const subtotal = getSubtotal()
   const discountAmount = getDiscountAmount()

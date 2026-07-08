@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Calendar, Clock } from 'lucide-react'
 import { useActiveSessions } from '@/shared/hooks/use-staff'
+import { useAuth } from '@/shared/hooks/use-auth'
 
 const DEPARTMENT_COLORS: Record<string, string> = {
   Physical:
@@ -26,6 +27,7 @@ function useClock() {
 export function Header() {
   const now = useClock()
   const { data: activeSessions } = useActiveSessions()
+  const { displayName, role } = useAuth()
 
   const timeStr = now.toLocaleTimeString('en-US', {
     hour: '2-digit',
@@ -41,9 +43,8 @@ export function Header() {
   })
 
   const activeNames = (activeSessions ?? []).map((s) => s.staffName)
-  const displayName = activeNames.join(', ') || 'No staff on shift'
-  const initials = activeNames.length > 0
-    ? activeNames[0].split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2)
+  const initials = displayName
+    ? displayName.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2)
     : '—'
 
   return (
@@ -80,10 +81,11 @@ export function Header() {
         <div className="flex items-center gap-2.5">
           <div className="hidden text-right sm:block">
             <p className="text-sm font-medium leading-none text-foreground">
-              {displayName}
+              {displayName || 'Unknown'}
             </p>
             <p className="mt-0.5 text-xs text-muted-foreground">
-              {activeNames.length > 0 ? 'On shift' : 'Ready to clock in'}
+              {role === 'owner' ? 'Owner' : 'Staff'}
+              {activeNames.length > 0 && ` · ${activeNames.length} on shift`}
             </p>
           </div>
           <Avatar className="h-8 w-8 border border-border">

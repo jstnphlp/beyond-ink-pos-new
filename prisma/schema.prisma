@@ -31,13 +31,21 @@ enum MovementType {
   purchase_receipt
 }
 
+enum UserRole {
+  owner
+  staff
+
+  @@map("user_role")
+}
+
 // ─── Auth / Access ────────────────────────────────────────────────────────────
 
 model AllowedUser {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email     String   @unique @db.Text
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
-  role      String   @default("physical_dept") @db.Text
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email     String    @unique @db.Text
+  name      String?   @db.Text
+  role      UserRole  @default(staff)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
 
   @@map("allowed_users")
 }

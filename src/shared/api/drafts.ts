@@ -23,7 +23,7 @@ export async function saveDraft(params: SaveDraftParams): Promise<string> {
     currentStep,
     subtotal,
     total,
-    cashierName = 'Juan Carlos',
+    cashierName = 'Staff',
     department = 'physical_dept',
   } = params
 
@@ -74,7 +74,7 @@ export async function updateDraft(id: string, params: SaveDraftParams): Promise<
     currentStep,
     subtotal,
     total,
-    cashierName = 'Juan Carlos',
+    cashierName = 'Staff',
     department = 'physical_dept',
   } = params
 
