@@ -25,7 +25,7 @@ function ContributorSelector() {
 
   if (!hasDesignOrDev) return null
 
-  const relevantDepts = new Set(
+  const relevantDepts = new Set<string>(
     selectedServices
       .filter((ss) => ss.service.department === 'Design' || ss.service.department === 'Dev')
       .map((ss) =>

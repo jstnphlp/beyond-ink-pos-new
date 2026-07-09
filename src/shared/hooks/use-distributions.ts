@@ -3,8 +3,7 @@ import { toast } from 'sonner'
 import {
   getPhysicalDistribution,
   getDesignDevDistribution,
-  getWeekGivenStatuses,
-  markWeekGiven,
+  upsertPayoutGiven,
 } from '@/shared/api/distributions'
 import type { DistributionPeriod } from '@/shared/api/distributions.types'
 
@@ -44,25 +43,15 @@ export function useDevDistribution(period: DistributionPeriod) {
   })
 }
 
-export function useWeekGivenStatuses(periodFrom: string, periodTo: string) {
-  return useQuery({
-    queryKey: distributionKeys.weekStatus(periodFrom, periodTo),
-    queryFn: () => getWeekGivenStatuses(periodFrom, periodTo),
-    staleTime: 5 * 60_000,
-  })
-}
-
-export function useMarkWeekGiven() {
+export function useMarkPayoutGiven(period: DistributionPeriod) {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: markWeekGiven,
-    onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: distributionKeys.weekStatus(variables.periodFrom, variables.periodTo),
-      })
-      queryClient.invalidateQueries({ queryKey: distributionKeys.all })
-      toast.success(variables.given ? 'Week marked as given' : 'Week marked as unpaid')
+    mutationFn: upsertPayoutGiven,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: distributionKeys.physical(period) })
+      queryClient.invalidateQueries({ queryKey: distributionKeys.design(period) })
+      queryClient.invalidateQueries({ queryKey: distributionKeys.dev(period) })
     },
     onError: () => {
       toast.error('Failed to update payout status')
