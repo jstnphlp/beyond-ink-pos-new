@@ -58,12 +58,40 @@ export function useMarkWeekGiven() {
 
   return useMutation({
     mutationFn: markWeekGiven,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: distributionKeys.all })
-      toast.success('Payout status updated')
+    onMutate: async (variables) => {
+      await queryClient.cancelQueries({ queryKey: distributionKeys.all })
+
+      const previous = queryClient.getQueriesData({ queryKey: distributionKeys.all })
+
+      queryClient.setQueriesData(
+        { queryKey: ['distributions', 'all-week-statuses'] },
+        (old: Record<string, Record<string, boolean>> | undefined) => {
+          if (!old) return old
+          const updated = { ...old }
+          for (const key of Object.keys(updated)) {
+            if (updated[key] && variables.department in updated[key]) {
+              updated[key] = {
+                ...updated[key],
+                [variables.department]: variables.given,
+              }
+            }
+          }
+          return updated
+        },
+      )
+
+      return { previous }
     },
-    onError: () => {
+    onError: (_err, _vars, context) => {
+      if (context?.previous) {
+        for (const [key, data] of context.previous) {
+          queryClient.setQueryData(key, data)
+        }
+      }
       toast.error('Failed to update payout status')
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: distributionKeys.all })
     },
   })
 }

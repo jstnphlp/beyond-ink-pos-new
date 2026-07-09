@@ -199,13 +199,13 @@ export async function getAllWeekGivenStatuses(
 
   const result: Record<string, Record<string, boolean>> = {}
   for (const week of weeks) {
-    const key = `${week.periodFrom}|${week.periodTo}`
+    const key = `${new Date(week.periodFrom).getTime()}|${new Date(week.periodTo).getTime()}`
     result[key] = {}
   }
 
   for (const row of data ?? []) {
     if (!row.given) continue
-    const key = `${row.period_from}|${row.period_to}`
+    const key = `${new Date(row.period_from).getTime()}|${new Date(row.period_to).getTime()}`
     if (result[key]) {
       result[key][row.department] = true
     }

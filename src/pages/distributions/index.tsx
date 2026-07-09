@@ -525,7 +525,7 @@ export function DistributionsPage() {
   const markWeekGiven = useMarkWeekGiven()
 
   function getStatus(week: WeekEntry): Record<string, boolean> {
-    return allGivenStatuses?.[`${week.periodFrom}|${week.periodTo}`] ?? {}
+    return allGivenStatuses?.[`${new Date(week.periodFrom).getTime()}|${new Date(week.periodTo).getTime()}`] ?? {}
   }
 
   function handleToggleGiven(department: string) {
