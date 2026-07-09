@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { ChartPie, DollarSign, Clock, Users, TrendingUp, CheckCircle2, Circle } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import {
   usePhysicalDistribution,
@@ -15,15 +16,58 @@ import type {
   DesignDevStaffPayout,
 } from '@/shared/api/distributions.types'
 
-function getDefaultDateFrom(): string {
-  const d = new Date()
-  d.setDate(d.getDate() - 30)
-  return d.toISOString().split('T')[0]
+// ─── Week helpers ────────────────────────────────────────────────────────────
+
+function getMonday(d: Date): Date {
+  const date = new Date(d)
+  const day = date.getDay()
+  const diff = date.getDate() - day + (day === 0 ? -6 : 1)
+  date.setDate(diff)
+  date.setHours(0, 0, 0, 0)
+  return date
 }
 
-function getDefaultDateTo(): string {
-  return new Date().toISOString().split('T')[0]
+function addDays(d: Date, days: number): Date {
+  const result = new Date(d)
+  result.setDate(result.getDate() + days)
+  return result
 }
+
+function formatWeekLabel(monday: Date): string {
+  const sunday = addDays(monday, 6)
+  const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' }
+  return `${monday.toLocaleDateString('en-US', opts)} – ${sunday.toLocaleDateString('en-US', opts)}`
+}
+
+function toIsoStart(d: Date): string {
+  return d.toISOString()
+}
+
+function toIsoEnd(d: Date): string {
+  const end = new Date(d)
+  end.setHours(23, 59, 59, 999)
+  return end.toISOString()
+}
+
+function generateWeeks(count: number): { monday: Date; label: string }[] {
+  const today = new Date()
+  const currentMonday = getMonday(today)
+  const weeks: { monday: Date; label: string }[] = []
+  for (let i = 0; i < count; i++) {
+    const monday = addDays(currentMonday, -i * 7)
+    weeks.push({ monday, label: formatWeekLabel(monday) })
+  }
+  return weeks
+}
+
+function weekToPeriod(monday: Date): DistributionPeriod {
+  return {
+    dateFrom: toIsoStart(monday),
+    dateTo: toIsoEnd(addDays(monday, 6)),
+  }
+}
+
+// ─── Format ──────────────────────────────────────────────────────────────────
 
 function formatCurrency(amount: number): string {
   return `₱${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -65,7 +109,7 @@ function PhysicalSummaryCards({
       <Card className="border-border/50">
         <CardContent className="p-5 text-center">
           <div className="flex items-center justify-center gap-1.5">
-            <DollarSign className="h-4 w-4 text-emerald-400" />
+            <TrendingUp className="h-4 w-4 text-emerald-400" />
             <p className="text-3xl font-bold text-emerald-400">
               {formatCurrency(totalPayroll)}
             </p>
@@ -167,7 +211,7 @@ function PhysicalStaffTable({
   if (payouts.length === 0) {
     return (
       <p className="py-6 text-center text-sm text-muted-foreground">
-        No attendance records found for this period.
+        No attendance records found for this week.
       </p>
     )
   }
@@ -255,7 +299,7 @@ function DesignDevStaffTable({
   if (payouts.length === 0) {
     return (
       <p className="py-6 text-center text-sm text-muted-foreground">
-        No contributors found for this period. Assign contributors to Design/Dev sales to see distributions.
+        No contributors found for this week. Assign contributors to Design/Dev sales to see distributions.
       </p>
     )
   }
@@ -324,7 +368,17 @@ function DesignDevStaffTable({
 
 // ─── Tab Panels ──────────────────────────────────────────────────────────────
 
-function PhysicalPanel({ period }: { period: DistributionPeriod }) {
+function PhysicalPanel({
+  period,
+  isGiven,
+  onToggleGiven,
+  isToggling,
+}: {
+  period: DistributionPeriod
+  isGiven: boolean
+  onToggleGiven: () => void
+  isToggling: boolean
+}) {
   const { data, isLoading } = usePhysicalDistribution(period)
   const payouts = (data?.staffPayouts as PhysicalStaffPayout[]) ?? []
   const totalHours = payouts.reduce((sum, p) => sum + p.totalHours, 0)
@@ -332,17 +386,33 @@ function PhysicalPanel({ period }: { period: DistributionPeriod }) {
 
   return (
     <div className="space-y-6">
-      <PhysicalSummaryCards
-        isLoading={isLoading}
-        totalHours={totalHours}
-        totalPayroll={totalPayroll}
-      />
+      <div className="flex items-center justify-between">
+        <PhysicalSummaryCards
+          isLoading={isLoading}
+          totalHours={totalHours}
+          totalPayroll={totalPayroll}
+        />
+      </div>
       <Card className="border-border/50">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Users className="h-4 w-4 text-brand" />
-            Staff Payouts
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Users className="h-4 w-4 text-brand" />
+              Staff Payouts
+            </CardTitle>
+            {payouts.length > 0 && (
+              <Button
+                size="sm"
+                variant={isGiven ? 'outline' : 'default'}
+                className={isGiven ? 'gap-1.5' : 'gap-1.5 bg-emerald-600 hover:bg-emerald-700'}
+                onClick={onToggleGiven}
+                disabled={isToggling}
+              >
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                {isGiven ? 'Mark as Unpaid' : 'Mark as Given'}
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <PhysicalStaffTable isLoading={isLoading} payouts={payouts} period={period} />
@@ -352,7 +422,17 @@ function PhysicalPanel({ period }: { period: DistributionPeriod }) {
   )
 }
 
-function DesignPanel({ period }: { period: DistributionPeriod }) {
+function DesignPanel({
+  period,
+  isGiven,
+  onToggleGiven,
+  isToggling,
+}: {
+  period: DistributionPeriod
+  isGiven: boolean
+  onToggleGiven: () => void
+  isToggling: boolean
+}) {
   const { data, isLoading } = useDesignDistribution(period)
   const payouts = (data?.staffPayouts as DesignDevStaffPayout[]) ?? []
 
@@ -367,10 +447,24 @@ function DesignPanel({ period }: { period: DistributionPeriod }) {
       />
       <Card className="border-border/50">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Users className="h-4 w-4 text-brand" />
-            Contributor Payouts
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Users className="h-4 w-4 text-brand" />
+              Contributor Payouts
+            </CardTitle>
+            {payouts.length > 0 && (
+              <Button
+                size="sm"
+                variant={isGiven ? 'outline' : 'default'}
+                className={isGiven ? 'gap-1.5' : 'gap-1.5 bg-emerald-600 hover:bg-emerald-700'}
+                onClick={onToggleGiven}
+                disabled={isToggling}
+              >
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                {isGiven ? 'Mark as Unpaid' : 'Mark as Given'}
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <DesignDevStaffTable isLoading={isLoading} payouts={payouts} department="design_dept" period={period} />
@@ -380,7 +474,17 @@ function DesignPanel({ period }: { period: DistributionPeriod }) {
   )
 }
 
-function DevPanel({ period }: { period: DistributionPeriod }) {
+function DevPanel({
+  period,
+  isGiven,
+  onToggleGiven,
+  isToggling,
+}: {
+  period: DistributionPeriod
+  isGiven: boolean
+  onToggleGiven: () => void
+  isToggling: boolean
+}) {
   const { data, isLoading } = useDevDistribution(period)
   const payouts = (data?.staffPayouts as DesignDevStaffPayout[]) ?? []
 
@@ -395,10 +499,24 @@ function DevPanel({ period }: { period: DistributionPeriod }) {
       />
       <Card className="border-border/50">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Users className="h-4 w-4 text-brand" />
-            Contributor Payouts
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Users className="h-4 w-4 text-brand" />
+              Contributor Payouts
+            </CardTitle>
+            {payouts.length > 0 && (
+              <Button
+                size="sm"
+                variant={isGiven ? 'outline' : 'default'}
+                className={isGiven ? 'gap-1.5' : 'gap-1.5 bg-emerald-600 hover:bg-emerald-700'}
+                onClick={onToggleGiven}
+                disabled={isToggling}
+              >
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                {isGiven ? 'Mark as Unpaid' : 'Mark as Given'}
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <DesignDevStaffTable isLoading={isLoading} payouts={payouts} department="dev_dept" period={period} />
@@ -410,18 +528,29 @@ function DevPanel({ period }: { period: DistributionPeriod }) {
 
 // ─── Page ────────────────────────────────────────────────────────────────────
 
-export function DistributionsPage() {
-  const [dateFrom, setDateFrom] = useState(getDefaultDateFrom)
-  const [dateTo, setDateTo] = useState(getDefaultDateTo)
-  const [appliedPeriod, setAppliedPeriod] = useState<DistributionPeriod>({
-    dateFrom: `${getDefaultDateFrom()}T00:00:00.000Z`,
-    dateTo: getDefaultDateTo(),
-  })
+const WEEK_COUNT = 8
 
-  function handleFilter() {
-    setAppliedPeriod({
-      dateFrom: dateFrom ? `${dateFrom}T00:00:00.000Z` : null,
-      dateTo: dateTo || null,
+export function DistributionsPage() {
+  const weeks = useMemo(() => generateWeeks(WEEK_COUNT), [])
+  const [selectedWeekIndex, setSelectedWeekIndex] = useState(0)
+  const selectedWeek = weeks[selectedWeekIndex]
+  const period = weekToPeriod(selectedWeek.monday)
+  const periodFrom = period.dateFrom!
+  const periodTo = period.dateTo!
+
+  const [weekCount, setWeekCount] = useState(WEEK_COUNT)
+  const allWeeks = useMemo(() => generateWeeks(weekCount), [weekCount])
+
+  const { data: givenStatuses } = useWeekGivenStatuses(periodFrom, periodTo)
+
+  const markWeekGiven = useMarkWeekGiven()
+
+  function handleToggleGiven(department: string) {
+    markWeekGiven.mutate({
+      department,
+      periodFrom,
+      periodTo,
+      given: !(givenStatuses?.[department] ?? false),
     })
   }
 
@@ -430,37 +559,56 @@ export function DistributionsPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Distributions</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Salary distributions by department.
+          Salary distributions by department. Select a week to view breakdowns and mark payouts as given.
         </p>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
-        <label className="flex flex-col gap-1">
-          <span className="text-xs text-muted-foreground">From</span>
-          <input
-            type="date"
-            value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
-            className="h-8 rounded-lg border border-border bg-background px-2.5 text-sm"
-          />
-        </label>
-        <label className="flex flex-col gap-1">
-          <span className="text-xs text-muted-foreground">To</span>
-          <input
-            type="date"
-            value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
-            className="h-8 rounded-lg border border-border bg-background px-2.5 text-sm"
-          />
-        </label>
-        <button
-          type="button"
-          onClick={handleFilter}
-          className="inline-flex h-8 items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-        >
-          Filter
-        </button>
+      {/* Week Selector */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-muted-foreground">Select Week</h2>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-xs"
+            onClick={() => setWeekCount((c) => c + 4)}
+          >
+            Show more weeks
+          </Button>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 shrink-0"
+            onClick={() => setSelectedWeekIndex((i) => Math.min(i + 1, allWeeks.length - 1))}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <div className="flex flex-wrap gap-2 overflow-x-auto">
+            {allWeeks.map((week, i) => {
+              const wp = weekToPeriod(week.monday)
+              return (
+                <WeekChip
+                  key={week.monday.toISOString()}
+                  label={week.label}
+                  isSelected={selectedWeekIndex === i}
+                  periodFrom={wp.dateFrom!}
+                  periodTo={wp.dateTo!}
+                  onClick={() => setSelectedWeekIndex(i)}
+                />
+              )
+            })}
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 shrink-0"
+            onClick={() => setSelectedWeekIndex((i) => Math.max(i - 1, 0))}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -481,15 +629,72 @@ export function DistributionsPage() {
         </TabsList>
 
         <TabsContent value="physical" className="mt-4">
-          <PhysicalPanel period={appliedPeriod} />
+          <PhysicalPanel
+            period={period}
+            isGiven={givenStatuses?.['physical_dept'] ?? false}
+            onToggleGiven={() => handleToggleGiven('physical_dept')}
+            isToggling={markWeekGiven.isPending}
+          />
         </TabsContent>
         <TabsContent value="design" className="mt-4">
-          <DesignPanel period={appliedPeriod} />
+          <DesignPanel
+            period={period}
+            isGiven={givenStatuses?.['design_dept'] ?? false}
+            onToggleGiven={() => handleToggleGiven('design_dept')}
+            isToggling={markWeekGiven.isPending}
+          />
         </TabsContent>
         <TabsContent value="dev" className="mt-4">
-          <DevPanel period={appliedPeriod} />
+          <DevPanel
+            period={period}
+            isGiven={givenStatuses?.['dev_dept'] ?? false}
+            onToggleGiven={() => handleToggleGiven('dev_dept')}
+            isToggling={markWeekGiven.isPending}
+          />
         </TabsContent>
       </Tabs>
     </div>
+  )
+}
+
+function WeekChip({
+  label,
+  isSelected,
+  periodFrom,
+  periodTo,
+  onClick,
+}: {
+  label: string
+  isSelected: boolean
+  periodFrom: string
+  periodTo: string
+  onClick: () => void
+}) {
+  const { data: givenMap } = useWeekGivenStatuses(periodFrom, periodTo)
+  const anyGiven = givenMap
+    ? Object.values(givenMap).some(Boolean)
+    : false
+  const allGiven = givenMap
+    ? Object.values(givenMap).length > 0 && Object.values(givenMap).every(Boolean)
+    : false
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`relative inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-all whitespace-nowrap ${
+        isSelected
+          ? 'border-brand/50 bg-brand/10 text-foreground ring-1 ring-brand/20'
+          : 'border-border/60 bg-card text-muted-foreground hover:border-border hover:bg-muted/30 hover:text-foreground'
+      }`}
+    >
+      {allGiven && (
+        <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
+      )}
+      {anyGiven && !allGiven && (
+        <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-amber-400" />
+      )}
+      {label}
+    </button>
   )
 }

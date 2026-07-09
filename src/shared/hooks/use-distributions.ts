@@ -15,6 +15,8 @@ export const distributionKeys = {
     [...distributionKeys.all, 'design', period] as const,
   dev: (period: DistributionPeriod) =>
     [...distributionKeys.all, 'dev', period] as const,
+  weekStatus: (periodFrom: string, periodTo: string) =>
+    [...distributionKeys.all, 'week-status', periodFrom, periodTo] as const,
 }
 
 export function usePhysicalDistribution(period: DistributionPeriod) {
