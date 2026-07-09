@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { usePosStore, MATERIALS } from '@/stores/pos-store'
+import { usePosStore, resolveMaterials } from '@/stores/pos-store'
 import { completeSale } from '@/shared/api/sales'
 import { saveDraft, updateDraft } from '@/shared/api/drafts'
 import { Button } from '@/components/ui/button'
@@ -37,6 +37,7 @@ export function OrderSummary() {
     paymentMethod,
     cashReceived,
     contributors,
+    catalog,
     getSubtotal,
     getDiscountAmount,
     getTotal,
@@ -49,6 +50,8 @@ export function OrderSummary() {
     isSavingDraft,
     setIsSavingDraft,
   } = usePosStore()
+
+  const materials = resolveMaterials(catalog)
 
   const [draftName, setDraftName] = useState('')
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -73,6 +76,7 @@ export function OrderSummary() {
         total,
         cashierName,
         contributors,
+        catalog,
       })
       toast.success('Sale completed', {
         description: `Transaction saved — Total: ₱${total.toLocaleString()}`,
@@ -168,7 +172,7 @@ export function OrderSummary() {
           <div className="space-y-0 divide-y divide-border/40 py-3">
             {selectedServices.map((ss) => {
               const material = ss.materialId
-                ? MATERIALS.find((m) => m.id === ss.materialId)
+                ? materials.find((m) => m.id === ss.materialId)
                 : null
 
               const unitPrice = material

@@ -1,7 +1,8 @@
-﻿import { usePosStore, SERVICES, SERVICE_CATEGORIES } from '@/stores/pos-store'
+﻿import { usePosStore, resolveCategories, resolveServices } from '@/stores/pos-store'
 import type { Department } from '@/stores/pos-store'
+import { Link } from 'react-router-dom'
 import { cn } from '@/lib/utils'
-import { Check, FileText } from 'lucide-react'
+import { Check, FileText, Settings } from 'lucide-react'
 import {
   Image,
   Sticker,
@@ -91,24 +92,35 @@ const DEPT_ICON_COLOR: Record<Department, string> = {
 }
 
 export function StepCategory() {
-  const { selectedCategoryIds, toggleCategory, selectedServices } = usePosStore()
+  const { selectedCategoryIds, toggleCategory, selectedServices, catalog } = usePosStore()
+  const categories = resolveCategories(catalog)
+  const services = resolveServices(catalog)
 
   const getCategorySelectedCount = (categoryId: string) =>
     selectedServices.filter((ss) => ss.service.categoryId === categoryId).length
 
   return (
     <div className="space-y-5">
-      <div>
-        <h2 className="text-lg font-semibold tracking-tight">
-          Select Service Categories
-        </h2>
-        <p className="mt-0.5 text-sm text-muted-foreground">
-          Choose one or more categories, then pick services in the next step.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold tracking-tight">
+            Select Service Categories
+          </h2>
+          <p className="mt-0.5 text-sm text-muted-foreground">
+            Choose one or more categories, then pick services in the next step.
+          </p>
+        </div>
+        <Link
+          to="/services"
+          className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg border border-border bg-card px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        >
+          <Settings className="h-3 w-3" />
+          Manage Services
+        </Link>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        {SERVICE_CATEGORIES.map((category) => {
+        {categories.map((category) => {
           const Icon = ICON_MAP[category.icon] ?? FileText
           const count = getCategorySelectedCount(category.id)
           const isSelected = selectedCategoryIds.includes(category.id)
@@ -158,7 +170,7 @@ export function StepCategory() {
                 <p className="text-sm font-semibold">{category.name}</p>
                 <div className="mt-2 flex items-center gap-1.5">
                   <span className="text-xs font-medium text-muted-foreground">
-                    {SERVICES.filter((s) => s.categoryId === category.id).length} services
+                    {services.filter((s) => s.categoryId === category.id).length} services
                   </span>
                 </div>
               </div>

@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { usePosStore, SERVICES, SERVICE_CATEGORIES } from '@/stores/pos-store'
-import type { Department, SelectedService } from '@/stores/pos-store'
+import { usePosStore, resolveCategories, resolveServices } from '@/stores/pos-store'
+import type { Department, SelectedService, Service } from '@/stores/pos-store'
 import { cn } from '@/lib/utils'
 import { X, FileText, ChevronDown, Check } from 'lucide-react'
 
@@ -16,18 +16,22 @@ function CategoryDropdown({
   selectedIds,
   onToggle,
   onRemove,
+  categories,
+  services,
 }: {
   categoryId: string
   selectedServices: SelectedService[]
   selectedIds: Set<string>
-  onToggle: (service: (typeof SERVICES)[number]) => void
+  onToggle: (service: Service) => void
   onRemove: () => void
+  categories: ReturnType<typeof resolveCategories>
+  services: ReturnType<typeof resolveServices>
 }) {
   const [open, setOpen] = useState(false)
 
-  const category = SERVICE_CATEGORIES.find((c) => c.id === categoryId)
-  const services = SERVICES.filter((s) => s.categoryId === categoryId)
-  const unselected = services.filter((s) => !selectedIds.has(s.id))
+  const category = categories.find((c) => c.id === categoryId)
+  const catServices = services.filter((s) => s.categoryId === categoryId)
+  const unselected = catServices.filter((s) => !selectedIds.has(s.id))
   const selected = selectedServices.filter((ss) => ss.service.categoryId === categoryId)
 
   if (!category) return null
@@ -144,7 +148,9 @@ function CategoryDropdown({
 }
 
 export function StepServices() {
-  const { selectedCategoryIds, toggleCategory, selectedServices, toggleService } = usePosStore()
+  const { selectedCategoryIds, toggleCategory, selectedServices, toggleService, catalog } = usePosStore()
+  const categories = resolveCategories(catalog)
+  const services = resolveServices(catalog)
   const selectedIds = new Set(selectedServices.map((s) => s.service.id))
 
   if (selectedCategoryIds.length === 0) {
@@ -177,6 +183,8 @@ export function StepServices() {
             selectedIds={selectedIds}
             onToggle={toggleService}
             onRemove={() => toggleCategory(catId)}
+            categories={categories}
+            services={services}
           />
         ))}
       </div>

@@ -1,4 +1,4 @@
-import { usePosStore, MATERIALS, getMaterialsForService } from '@/stores/pos-store'
+import { usePosStore, resolveMaterials, resolveMaterialsForService } from '@/stores/pos-store'
 import { Input } from '@/components/ui/input'
 import { AlertTriangle, Minus, Plus, Package } from 'lucide-react'
 
@@ -7,7 +7,9 @@ export function StepMaterials() {
     selectedServices,
     updateServiceMaterial,
     updateServiceQuantity,
+    catalog,
   } = usePosStore()
+  const materials = resolveMaterials(catalog)
 
   if (selectedServices.length === 0) {
     return (
@@ -58,7 +60,7 @@ export function StepMaterials() {
                   className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm transition-default focus:border-ring focus:ring-2 focus:ring-ring/30 focus:outline-none"
                 >
                   <option value="">No material</option>
-                  {getMaterialsForService(ss.service.id).map((mat) => (
+                  {resolveMaterialsForService(ss.service.id, catalog).map((mat) => (
                     <option key={mat.id} value={mat.id}>
                       {mat.name} — ₱{mat.pricePerUnit}/{mat.unit}
                     </option>
@@ -67,7 +69,7 @@ export function StepMaterials() {
 
                 {/* Low stock warning */}
                 {ss.materialId && (() => {
-                  const mat = MATERIALS.find((m) => m.id === ss.materialId)
+                  const mat = materials.find((m) => m.id === ss.materialId)
                   if (mat?.stockLevel === 'low') {
                     return (
                       <div className="mt-1.5 flex items-center gap-1.5 text-warning">
@@ -83,7 +85,7 @@ export function StepMaterials() {
 
                 {/* Price display */}
                 {ss.materialId && (() => {
-                  const mat = MATERIALS.find((m) => m.id === ss.materialId)
+                  const mat = materials.find((m) => m.id === ss.materialId)
                   if (!mat) return null
                   const unitPrice = mat.pricePerUnit
                   const lineTotal = unitPrice * ss.quantity
