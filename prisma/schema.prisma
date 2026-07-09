@@ -265,7 +265,7 @@ model TransactionContributor {
 model DistributionPayout {
   id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   staffMemberId  String?   @map("staff_member_id") @db.Uuid
-  staffName      String    @default("") @map("staff_name") @db.Text
+  staffName      String?   @map("staff_name") @db.Text
   department     String    @db.Text
   periodFrom     DateTime  @map("period_from") @db.Timestamptz
   periodTo       DateTime  @map("period_to") @db.Timestamptz
