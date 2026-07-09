@@ -198,54 +198,6 @@ export async function getDesignDevDistribution(
   }
 }
 
-export async function upsertPayoutGiven(params: {
-  staffMemberId: string
-  staffName: string
-  department: string
-  periodFrom: string
-  periodTo: string
-  amount: number
-  given: boolean
-}): Promise<void> {
-  const { staffMemberId, staffName, department, periodFrom, periodTo, amount, given } = params
-
-  const { data: existing } = await supabase
-    .from('distribution_payouts')
-    .select('id')
-    .eq('staff_member_id', staffMemberId)
-    .eq('department', department)
-    .eq('period_from', periodFrom)
-    .eq('period_to', periodTo)
-    .maybeSingle()
-
-  if (existing) {
-    const { error } = await supabase
-      .from('distribution_payouts')
-      .update({
-        given,
-        given_at: given ? new Date().toISOString() : null,
-        amount,
-        staff_name: staffName,
-      })
-      .eq('id', existing.id)
-    if (error) throw error
-  } else {
-    const { error } = await supabase
-      .from('distribution_payouts')
-      .insert({
-        staff_member_id: staffMemberId,
-        staff_name: staffName,
-        department,
-        period_from: periodFrom,
-        period_to: periodTo,
-        amount,
-        given,
-        given_at: given ? new Date().toISOString() : null,
-      })
-    if (error) throw error
-  }
-}
-
 async function getPhysicalStaffMembers(): Promise<{ id: string; name: string }[]> {
   const { data, error } = await supabase
     .from('staff_members')
