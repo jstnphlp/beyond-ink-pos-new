@@ -51,16 +51,10 @@ export async function getStaffMembers(): Promise<StaffMember[]> {
 
 export async function getActiveSessions(): Promise<StaffSession[]> {
   // Stale session cleanup — runs ONCE per page load, not on every fetch
+  // Auto-logs out at 9 PM (21:00) of the day the session started
   if (!staleCleanupDone) {
     staleCleanupDone = true
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    supabase
-      .from('staff_sessions')
-      .update({ time_out: new Date().toISOString(), auto_logged_out: true })
-      .is('time_out', null)
-      .lt('time_in', today.toISOString())
-      .then(() => {})
+    supabase.rpc('auto_logout_stale_sessions').then(() => {})
   }
 
   const { data, error } = await supabase

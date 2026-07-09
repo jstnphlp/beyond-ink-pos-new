@@ -169,3 +169,60 @@ async function getPhysicalStaffMembers(): Promise<{ id: string; name: string }[]
   if (error) throw error
   return data ?? []
 }
+
+export async function getWeekGivenStatuses(
+  periodFrom: string,
+  periodTo: string,
+): Promise<Record<string, boolean>> {
+  const { data, error } = await supabase
+    .from('distribution_payouts')
+    .select('department, given')
+    .eq('period_from', periodFrom)
+    .eq('period_to', periodTo)
+
+  if (error) throw error
+
+  const result: Record<string, boolean> = {}
+  for (const row of data ?? []) {
+    if (row.given) {
+      result[row.department] = true
+    }
+  }
+  return result
+}
+
+export async function markWeekGiven(params: {
+  department: string
+  periodFrom: string
+  periodTo: string
+  given: boolean
+}): Promise<void> {
+  const { department, periodFrom, periodTo, given } = params
+
+  if (given) {
+    const { data: payouts } = await supabase
+      .from('distribution_payouts')
+      .select('id')
+      .eq('department', department)
+      .eq('period_from', periodFrom)
+      .eq('period_to', periodTo)
+
+    if (payouts && payouts.length > 0) {
+      const { error } = await supabase
+        .from('distribution_payouts')
+        .update({ given: true, given_at: new Date().toISOString() })
+        .eq('department', department)
+        .eq('period_from', periodFrom)
+        .eq('period_to', periodTo)
+      if (error) throw error
+    }
+  } else {
+    const { error } = await supabase
+      .from('distribution_payouts')
+      .update({ given: false, given_at: null })
+      .eq('department', department)
+      .eq('period_from', periodFrom)
+      .eq('period_to', periodTo)
+    if (error) throw error
+  }
+}
