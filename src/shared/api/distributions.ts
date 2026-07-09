@@ -242,8 +242,6 @@ export async function markWeekGiven(params: {
     const { error } = await supabase
       .from('distribution_payouts')
       .insert({
-        staff_member_id: '00000000-0000-0000-0000-000000000000',
-        staff_name: '*',
         department,
         period_from: periodFrom,
         period_to: periodTo,
