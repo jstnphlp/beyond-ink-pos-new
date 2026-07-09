@@ -13,33 +13,29 @@ function calcHours(timeIn: string, timeOut: string): number {
   return Math.round((ms / (1000 * 60 * 60)) * 100) / 100
 }
 
-async function getPayoutStatuses(
-  department: string,
-  periodFrom: string,
-  periodTo: string,
-): Promise<Map<string, { given: boolean; payoutId: string }>> {
+let cachedStaffMembers: { id: string; name: string }[] | null = null
+let staffCacheTime = 0
+const STAFF_CACHE_TTL = 5 * 60 * 1000
+
+async function getPhysicalStaffMembers(): Promise<{ id: string; name: string }[]> {
+  if (cachedStaffMembers && Date.now() - staffCacheTime < STAFF_CACHE_TTL) {
+    return cachedStaffMembers
+  }
   const { data, error } = await supabase
-    .from('distribution_payouts')
-    .select('id, staff_member_id, given')
-    .eq('department', department)
-    .eq('period_from', periodFrom)
-    .eq('period_to', periodTo)
+    .from('staff_members')
+    .select('id, name')
+    .eq('is_active', true)
+    .eq('department', 'physical_dept')
 
   if (error) throw error
-
-  const map = new Map<string, { given: boolean; payoutId: string }>()
-  for (const row of data ?? []) {
-    map.set(row.staff_member_id, { given: row.given, payoutId: row.id })
-  }
-  return map
+  cachedStaffMembers = data ?? []
+  staffCacheTime = Date.now()
+  return cachedStaffMembers
 }
 
 export async function getPhysicalDistribution(
   period: DistributionPeriod,
 ): Promise<DepartmentDistribution> {
-  const periodFrom = period.dateFrom ?? '1970-01-01T00:00:00.000Z'
-  const periodTo = period.dateTo ? `${period.dateTo}T23:59:59.999Z` : '2099-12-31T23:59:59.999Z'
-
   let query = supabase
     .from('staff_sessions')
     .select('staff_member_id, staff_name, time_in, time_out')
@@ -49,7 +45,7 @@ export async function getPhysicalDistribution(
     query = query.gte('time_in', period.dateFrom)
   }
   if (period.dateTo) {
-    query = query.lte('time_in', `${period.dateTo}T23:59:59.999Z`)
+    query = query.lte('time_in', period.dateTo)
   }
 
   const { data: sessions, error } = await query
@@ -73,20 +69,13 @@ export async function getPhysicalDistribution(
     }
   }
 
-  const statusMap = await getPayoutStatuses('physical_dept', periodFrom, periodTo)
-
   const payouts: PhysicalStaffPayout[] = Array.from(hoursMap.entries()).map(
-    ([staffMemberId, { name, hours }]) => {
-      const status = statusMap.get(staffMemberId)
-      return {
-        staffMemberId,
-        staffName: name,
-        totalHours: Math.round(hours * 100) / 100,
-        payout: Math.round(hours * HOURLY_RATE * 100) / 100,
-        given: status?.given ?? false,
-        payoutId: status?.payoutId ?? null,
-      }
-    },
+    ([staffMemberId, { name, hours }]) => ({
+      staffMemberId,
+      staffName: name,
+      totalHours: Math.round(hours * 100) / 100,
+      payout: Math.round(hours * HOURLY_RATE * 100) / 100,
+    }),
   )
 
   const totalPayroll = payouts.reduce((sum, p) => sum + p.payout, 0)
@@ -105,9 +94,6 @@ export async function getDesignDevDistribution(
   department: 'design_dept' | 'dev_dept',
   period: DistributionPeriod,
 ): Promise<DepartmentDistribution> {
-  const periodFrom = period.dateFrom ?? '1970-01-01T00:00:00.000Z'
-  const periodTo = period.dateTo ? `${period.dateTo}T23:59:59.999Z` : '2099-12-31T23:59:59.999Z'
-
   let txnQuery = supabase
     .from('sales_transactions')
     .select('id, final_total')
@@ -118,7 +104,7 @@ export async function getDesignDevDistribution(
     txnQuery = txnQuery.gte('completed_at', period.dateFrom)
   }
   if (period.dateTo) {
-    txnQuery = txnQuery.lte('completed_at', `${period.dateTo}T23:59:59.999Z`)
+    txnQuery = txnQuery.lte('completed_at', period.dateTo)
   }
 
   const { data: transactions, error: txnError } = await txnQuery
@@ -161,8 +147,6 @@ export async function getDesignDevDistribution(
 
     const deptShare = Math.round(totalRevenue * 0.68 * 100) / 100
 
-    const statusMap = await getPayoutStatuses(department, periodFrom, periodTo)
-
     payouts = Array.from(staffTxnMap.entries()).map(
       ([staffMemberId, { name, txnIds }]) => {
         const transactionCount = txnIds.size
@@ -174,15 +158,12 @@ export async function getDesignDevDistribution(
           totalContributions > 0
             ? Math.round((deptShare * transactionCount) / totalContributions * 100) / 100
             : 0
-        const status = statusMap.get(staffMemberId)
         return {
           staffMemberId,
           staffName: name,
           transactionCount,
           sharePercent,
           payout,
-          given: status?.given ?? false,
-          payoutId: status?.payoutId ?? null,
         }
       },
     )
@@ -198,35 +179,38 @@ export async function getDesignDevDistribution(
   }
 }
 
-async function getPhysicalStaffMembers(): Promise<{ id: string; name: string }[]> {
-  const { data, error } = await supabase
-    .from('staff_members')
-    .select('id, name')
-    .eq('is_active', true)
-    .eq('department', 'physical_dept')
+export async function getAllWeekGivenStatuses(
+  weeks: { periodFrom: string; periodTo: string }[],
+): Promise<Record<string, Record<string, boolean>>> {
+  if (weeks.length === 0) return {}
 
-  if (error) throw error
-  return data ?? []
-}
+  const allFroms = weeks.map((w) => w.periodFrom)
+  const minFrom = allFroms.sort()[0]
+  const allTos = weeks.map((w) => w.periodTo)
+  const maxTo = allTos.sort().reverse()[0]
 
-export async function getWeekGivenStatuses(
-  periodFrom: string,
-  periodTo: string,
-): Promise<Record<string, boolean>> {
   const { data, error } = await supabase
     .from('distribution_payouts')
-    .select('department, given')
-    .eq('period_from', periodFrom)
-    .eq('period_to', periodTo)
+    .select('department, period_from, period_to, given')
+    .gte('period_from', minFrom)
+    .lte('period_to', maxTo)
 
   if (error) throw error
 
-  const result: Record<string, boolean> = {}
+  const result: Record<string, Record<string, boolean>> = {}
+  for (const week of weeks) {
+    const key = `${week.periodFrom}|${week.periodTo}`
+    result[key] = {}
+  }
+
   for (const row of data ?? []) {
-    if (row.given) {
-      result[row.department] = true
+    if (!row.given) continue
+    const key = `${row.period_from}|${row.period_to}`
+    if (result[key]) {
+      result[key][row.department] = true
     }
   }
+
   return result
 }
 
@@ -238,30 +222,35 @@ export async function markWeekGiven(params: {
 }): Promise<void> {
   const { department, periodFrom, periodTo, given } = params
 
-  if (given) {
-    const { data: payouts } = await supabase
-      .from('distribution_payouts')
-      .select('id')
-      .eq('department', department)
-      .eq('period_from', periodFrom)
-      .eq('period_to', periodTo)
+  const { data: existing } = await supabase
+    .from('distribution_payouts')
+    .select('id')
+    .eq('department', department)
+    .eq('period_from', periodFrom)
+    .eq('period_to', periodTo)
+    .limit(1)
 
-    if (payouts && payouts.length > 0) {
-      const { error } = await supabase
-        .from('distribution_payouts')
-        .update({ given: true, given_at: new Date().toISOString() })
-        .eq('department', department)
-        .eq('period_from', periodFrom)
-        .eq('period_to', periodTo)
-      if (error) throw error
-    }
-  } else {
+  if (existing && existing.length > 0) {
     const { error } = await supabase
       .from('distribution_payouts')
-      .update({ given: false, given_at: null })
+      .update({ given, given_at: given ? new Date().toISOString() : null })
       .eq('department', department)
       .eq('period_from', periodFrom)
       .eq('period_to', periodTo)
+    if (error) throw error
+  } else if (given) {
+    const { error } = await supabase
+      .from('distribution_payouts')
+      .insert({
+        staff_member_id: '00000000-0000-0000-0000-000000000000',
+        staff_name: '*',
+        department,
+        period_from: periodFrom,
+        period_to: periodTo,
+        amount: 0,
+        given: true,
+        given_at: new Date().toISOString(),
+      })
     if (error) throw error
   }
 }

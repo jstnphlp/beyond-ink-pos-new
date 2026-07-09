@@ -3,7 +3,7 @@ import { toast } from 'sonner'
 import {
   getPhysicalDistribution,
   getDesignDevDistribution,
-  getWeekGivenStatuses,
+  getAllWeekGivenStatuses,
   markWeekGiven,
 } from '@/shared/api/distributions'
 import type { DistributionPeriod } from '@/shared/api/distributions.types'
@@ -16,8 +16,8 @@ export const distributionKeys = {
     [...distributionKeys.all, 'design', period] as const,
   dev: (period: DistributionPeriod) =>
     [...distributionKeys.all, 'dev', period] as const,
-  weekStatus: (periodFrom: string, periodTo: string) =>
-    [...distributionKeys.all, 'week-status', periodFrom, periodTo] as const,
+  allWeekStatuses: (weeks: { periodFrom: string; periodTo: string }[]) =>
+    [...distributionKeys.all, 'all-week-statuses', weeks.map((w) => w.periodFrom).join(',')] as const,
 }
 
 export function usePhysicalDistribution(period: DistributionPeriod) {
@@ -44,11 +44,12 @@ export function useDevDistribution(period: DistributionPeriod) {
   })
 }
 
-export function useWeekGivenStatuses(periodFrom: string, periodTo: string) {
+export function useAllWeekGivenStatuses(weeks: { periodFrom: string; periodTo: string }[]) {
   return useQuery({
-    queryKey: distributionKeys.weekStatus(periodFrom, periodTo),
-    queryFn: () => getWeekGivenStatuses(periodFrom, periodTo),
+    queryKey: distributionKeys.allWeekStatuses(weeks),
+    queryFn: () => getAllWeekGivenStatuses(weeks),
     staleTime: 5 * 60_000,
+    placeholderData: (prev) => prev,
   })
 }
 
@@ -57,12 +58,9 @@ export function useMarkWeekGiven() {
 
   return useMutation({
     mutationFn: markWeekGiven,
-    onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: distributionKeys.weekStatus(variables.periodFrom, variables.periodTo),
-      })
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: distributionKeys.all })
-      toast.success(variables.given ? 'Week marked as given' : 'Week marked as unpaid')
+      toast.success('Payout status updated')
     },
     onError: () => {
       toast.error('Failed to update payout status')

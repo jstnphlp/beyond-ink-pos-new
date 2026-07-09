@@ -9,7 +9,7 @@ import {
   useDesignDistribution,
   useDevDistribution,
   useMarkWeekGiven,
-  useWeekGivenStatuses,
+  useAllWeekGivenStatuses,
 } from '@/shared/hooks/use-distributions'
 import type {
   DistributionPeriod,
@@ -50,22 +50,31 @@ function toIsoEnd(d: Date): string {
   return end.toISOString()
 }
 
-function generateWeeks(count: number): { monday: Date; label: string }[] {
+interface WeekEntry {
+  monday: Date
+  label: string
+  periodFrom: string
+  periodTo: string
+}
+
+function generateWeeks(count: number): WeekEntry[] {
   const today = new Date()
   const currentMonday = getMonday(today)
-  const weeks: { monday: Date; label: string }[] = []
+  const weeks: WeekEntry[] = []
   for (let i = 0; i < count; i++) {
     const monday = addDays(currentMonday, -i * 7)
-    weeks.push({ monday, label: formatWeekLabel(monday) })
+    weeks.push({
+      monday,
+      label: formatWeekLabel(monday),
+      periodFrom: toIsoStart(monday),
+      periodTo: toIsoEnd(addDays(monday, 6)),
+    })
   }
   return weeks
 }
 
-function weekToPeriod(monday: Date): DistributionPeriod {
-  return {
-    dateFrom: toIsoStart(monday),
-    dateTo: toIsoEnd(addDays(monday, 6)),
-  }
+function weekToPeriod(week: WeekEntry): DistributionPeriod {
+  return { dateFrom: week.periodFrom, dateTo: week.periodTo }
 }
 
 // ─── Format ──────────────────────────────────────────────────────────────────
@@ -462,24 +471,16 @@ function DevPanel({
 function WeekChip({
   label,
   isSelected,
-  periodFrom,
-  periodTo,
+  isAllGiven,
+  isAnyGiven,
   onClick,
 }: {
   label: string
   isSelected: boolean
-  periodFrom: string
-  periodTo: string
+  isAllGiven: boolean
+  isAnyGiven: boolean
   onClick: () => void
 }) {
-  const { data: givenMap } = useWeekGivenStatuses(periodFrom, periodTo)
-  const anyGiven = givenMap
-    ? Object.values(givenMap).some(Boolean)
-    : false
-  const allGiven = givenMap
-    ? Object.values(givenMap).length > 0 && Object.values(givenMap).every(Boolean)
-    : false
-
   return (
     <button
       type="button"
@@ -490,10 +491,10 @@ function WeekChip({
           : 'border-border/60 bg-card text-muted-foreground hover:border-border hover:bg-muted/30 hover:text-foreground'
       }`}
     >
-      {allGiven && (
+      {isAllGiven && (
         <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
       )}
-      {anyGiven && !allGiven && (
+      {isAnyGiven && !isAllGiven && (
         <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-amber-400" />
       )}
       {label}
@@ -504,27 +505,40 @@ function WeekChip({
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 const WEEK_COUNT = 8
+const DEPARTMENTS = ['physical_dept', 'design_dept', 'dev_dept']
 
 export function DistributionsPage() {
   const [weekCount, setWeekCount] = useState(WEEK_COUNT)
   const allWeeks = useMemo(() => generateWeeks(weekCount), [weekCount])
   const [selectedWeekIndex, setSelectedWeekIndex] = useState(0)
   const selectedWeek = allWeeks[selectedWeekIndex]
-  const period = weekToPeriod(selectedWeek.monday)
-  const periodFrom = period.dateFrom!
-  const periodTo = period.dateTo!
+  const period = weekToPeriod(selectedWeek)
+  const periodFrom = selectedWeek.periodFrom
+  const periodTo = selectedWeek.periodTo
 
-  const { data: givenStatuses } = useWeekGivenStatuses(periodFrom, periodTo)
+  const weekKeys = useMemo(
+    () => allWeeks.map((w) => ({ periodFrom: w.periodFrom, periodTo: w.periodTo })),
+    [allWeeks],
+  )
+
+  const { data: allGivenStatuses } = useAllWeekGivenStatuses(weekKeys)
   const markWeekGiven = useMarkWeekGiven()
 
+  function getStatus(week: WeekEntry): Record<string, boolean> {
+    return allGivenStatuses?.[`${week.periodFrom}|${week.periodTo}`] ?? {}
+  }
+
   function handleToggleGiven(department: string) {
+    const current = getStatus(selectedWeek)
     markWeekGiven.mutate({
       department,
       periodFrom,
       periodTo,
-      given: !(givenStatuses?.[department] ?? false),
+      given: !(current[department] ?? false),
     })
   }
+
+  const selectedGiven = getStatus(selectedWeek)
 
   return (
     <div className="space-y-6 p-4 md:p-6">
@@ -559,14 +573,16 @@ export function DistributionsPage() {
           </Button>
           <div className="flex flex-wrap gap-2 overflow-x-auto">
             {allWeeks.map((week, i) => {
-              const wp = weekToPeriod(week.monday)
+              const status = getStatus(week)
+              const anyGiven = DEPARTMENTS.some((d) => status[d])
+              const allGiven = DEPARTMENTS.every((d) => status[d]) && DEPARTMENTS.length > 0
               return (
                 <WeekChip
-                  key={week.monday.toISOString()}
+                  key={week.periodFrom}
                   label={week.label}
                   isSelected={selectedWeekIndex === i}
-                  periodFrom={wp.dateFrom!}
-                  periodTo={wp.dateTo!}
+                  isAllGiven={allGiven}
+                  isAnyGiven={anyGiven}
                   onClick={() => setSelectedWeekIndex(i)}
                 />
               )
@@ -603,7 +619,7 @@ export function DistributionsPage() {
         <TabsContent value="physical" className="mt-4">
           <PhysicalPanel
             period={period}
-            isGiven={givenStatuses?.['physical_dept'] ?? false}
+            isGiven={selectedGiven['physical_dept'] ?? false}
             onToggleGiven={() => handleToggleGiven('physical_dept')}
             isToggling={markWeekGiven.isPending}
           />
@@ -611,7 +627,7 @@ export function DistributionsPage() {
         <TabsContent value="design" className="mt-4">
           <DesignPanel
             period={period}
-            isGiven={givenStatuses?.['design_dept'] ?? false}
+            isGiven={selectedGiven['design_dept'] ?? false}
             onToggleGiven={() => handleToggleGiven('design_dept')}
             isToggling={markWeekGiven.isPending}
           />
@@ -619,7 +635,7 @@ export function DistributionsPage() {
         <TabsContent value="dev" className="mt-4">
           <DevPanel
             period={period}
-            isGiven={givenStatuses?.['dev_dept'] ?? false}
+            isGiven={selectedGiven['dev_dept'] ?? false}
             onToggleGiven={() => handleToggleGiven('dev_dept')}
             isToggling={markWeekGiven.isPending}
           />

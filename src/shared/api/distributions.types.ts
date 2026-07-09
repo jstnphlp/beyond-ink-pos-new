@@ -8,8 +8,6 @@ export interface PhysicalStaffPayout {
   staffName: string
   totalHours: number
   payout: number
-  given: boolean
-  payoutId: string | null
 }
 
 export interface DesignDevStaffPayout {
@@ -18,8 +16,6 @@ export interface DesignDevStaffPayout {
   transactionCount: number
   sharePercent: number
   payout: number
-  given: boolean
-  payoutId: string | null
 }
 
 export interface DepartmentDistribution {
