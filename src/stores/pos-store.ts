@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { DraftPayload } from '@/shared/api/drafts.types'
 import type { StaffMember } from '@/shared/api/staff.types'
+import type { CatalogData } from '@/shared/api/catalog.types'
 
 // ─── Types ────────────────────────────────────────────────
 
@@ -234,6 +235,59 @@ export function getMaterialsForService(serviceId: string): MaterialOption[] {
   return MATERIALS.filter((m) => materialIds.includes(m.id))
 }
 
+// ─── Catalog resolvers ──────────────────────────────────────
+
+const DEPT_MAP: Record<string, Department> = {
+  physical_dept: 'Physical',
+  design_dept: 'Design',
+  dev_dept: 'Dev',
+}
+
+export function resolveCategories(catalog: CatalogData | null): ServiceCategory[] {
+  if (!catalog || catalog.categories.length === 0) return SERVICE_CATEGORIES
+  return catalog.categories.map((c) => ({
+    id: c.id,
+    name: c.name,
+    department: DEPT_MAP[c.department] ?? 'Physical',
+    icon: c.icon || 'FileText',
+  }))
+}
+
+export function resolveServices(catalog: CatalogData | null): Service[] {
+  if (!catalog || catalog.services.length === 0) return SERVICES
+  const catDeptMap = new Map(catalog.categories.map((c) => [c.id, DEPT_MAP[c.department] ?? 'Physical' as Department]))
+  return catalog.services.map((s) => ({
+    id: s.id,
+    name: s.name,
+    description: s.description,
+    basePrice: s.basePrice,
+    department: catDeptMap.get(s.categoryId) ?? 'Physical',
+    icon: s.icon || 'FileText',
+    categoryId: s.categoryId,
+  }))
+}
+
+export function resolveMaterials(catalog: CatalogData | null): MaterialOption[] {
+  if (!catalog || catalog.materials.length === 0) return MATERIALS
+  return catalog.materials.map((m) => ({
+    id: m.id,
+    name: m.name,
+    pricePerUnit: m.sellingPrice,
+    unit: m.unit,
+    stockLevel: m.stockOnHand <= 0 ? 'out' as const : m.stockOnHand <= 10 ? 'low' as const : 'normal' as const,
+  }))
+}
+
+export function resolveMaterialsForService(serviceId: string, catalog: CatalogData | null): MaterialOption[] {
+  if (!catalog || catalog.serviceMaterialLinks.length === 0) return getMaterialsForService(serviceId)
+  const materials = resolveMaterials(catalog)
+  const ids = new Set(
+    catalog.serviceMaterialLinks.filter((l) => l.serviceId === serviceId).map((l) => l.inventoryItemId),
+  )
+  if (ids.size === 0) return []
+  return materials.filter((m) => ids.has(m.id))
+}
+
 
 // ─── Store ────────────────────────────────────────────────
 
@@ -243,6 +297,10 @@ interface PosState {
   setStep: (step: number) => void
   nextStep: () => void
   prevStep: () => void
+
+  // Catalog (from DB)
+  catalog: CatalogData | null
+  setCatalog: (data: CatalogData) => void
 
   // Selected categories (Step 1)
   selectedCategoryIds: string[]
@@ -300,6 +358,10 @@ export const usePosStore = create<PosState>((set, get) => ({
   setStep: (step) => set({ currentStep: step }),
   nextStep: () => set((s) => ({ currentStep: Math.min(s.currentStep + 1, 5) })),
   prevStep: () => set((s) => ({ currentStep: Math.max(s.currentStep - 1, 1) })),
+
+  // Catalog
+  catalog: null,
+  setCatalog: (data) => set({ catalog: data }),
 
   // Selected categories
   selectedCategoryIds: [],
@@ -365,10 +427,11 @@ export const usePosStore = create<PosState>((set, get) => ({
 
   // Computed
   getSubtotal: () => {
-    const { selectedServices } = get()
+    const { selectedServices, catalog } = get()
+    const materials = resolveMaterials(catalog)
     return selectedServices.reduce((total, ss) => {
       if (!ss.materialId) return total
-      const mat = MATERIALS.find((m) => m.id === ss.materialId)
+      const mat = materials.find((m) => m.id === ss.materialId)
       if (!mat) return total
       return total + mat.pricePerUnit * ss.quantity
     }, 0)

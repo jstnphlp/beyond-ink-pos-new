@@ -62,23 +62,33 @@ function formatCurrency(amount: number): string {
   return `₱${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
-const DEPARTMENT_MAP: Record<string, string> = {
+// ─── Department grouping constants ────────────────────────────────────────────
+
+const DEPT_ORDER = ['physical_dept', 'design_dept', 'dev_dept'] as const
+const DEPT_LABELS: Record<string, string> = {
   physical_dept: 'Physical',
   design_dept: 'Design',
   dev_dept: 'Dev',
 }
-
-function getDepartmentBadgeClass(dept: string): string {
-  switch (dept) {
-    case 'physical_dept':
-      return 'border-blue-500/30 bg-blue-500/10 text-blue-400'
-    case 'design_dept':
-      return 'border-violet-500/30 bg-violet-500/10 text-violet-400'
-    case 'dev_dept':
-      return 'border-amber-500/30 bg-amber-500/10 text-amber-400'
-    default:
-      return 'border-border text-muted-foreground'
-  }
+const DEPT_COLORS: Record<string, { border: string; bg: string; text: string; headerBg: string }> = {
+  physical_dept: {
+    border: 'border-blue-500/20',
+    bg: 'bg-blue-500/5',
+    text: 'text-blue-400',
+    headerBg: 'bg-blue-500/10',
+  },
+  design_dept: {
+    border: 'border-violet-500/20',
+    bg: 'bg-violet-500/5',
+    text: 'text-violet-400',
+    headerBg: 'bg-violet-500/10',
+  },
+  dev_dept: {
+    border: 'border-amber-500/20',
+    bg: 'bg-amber-500/5',
+    text: 'text-amber-400',
+    headerBg: 'bg-amber-500/10',
+  },
 }
 
 // ─── Delete Confirmation Dialog ───────────────────────────────────────────────
@@ -239,6 +249,70 @@ function CategoryFormDialog({
   )
 }
 
+function DepartmentCategorySection({
+  department,
+  categories,
+}: {
+  department: string
+  categories: CatalogCategory[]
+}) {
+  const deleteMutation = useDeleteCategory()
+  const colors = DEPT_COLORS[department] ?? DEPT_COLORS.physical_dept
+
+  return (
+    <Card className={`${colors.border} overflow-hidden`}>
+      <div className={`${colors.headerBg} border-b ${colors.border} px-5 py-3`}>
+        <h3 className={`text-sm font-bold ${colors.text}`}>
+          {DEPT_LABELS[department] ?? department}
+        </h3>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          {categories.length} categor{categories.length !== 1 ? 'ies' : 'y'}
+        </p>
+      </div>
+      <CardContent className="p-0">
+        <div className="divide-y divide-border/20">
+          {categories.map((cat) => (
+            <div key={cat.id} className="flex items-center gap-4 px-5 py-2.5">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                <Tags className="h-4 w-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium">{cat.name}</p>
+                <p className="text-[11px] text-muted-foreground">{cat.icon || 'No icon'}</p>
+              </div>
+              <Badge
+                variant="outline"
+                className={
+                  cat.isActive
+                    ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
+                    : 'border-border text-muted-foreground'
+                }
+              >
+                {cat.isActive ? 'Active' : 'Inactive'}
+              </Badge>
+              <div className="flex shrink-0 items-center gap-1">
+                <CategoryFormDialog
+                  category={cat}
+                  trigger={
+                    <Button variant="ghost" size="icon-sm">
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                  }
+                />
+                <DeleteDialog
+                  label={cat.name}
+                  onConfirm={() => deleteMutation.mutate(cat.id)}
+                  isPending={deleteMutation.isPending}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
 function CategoriesPanel({
   categories,
   isLoading,
@@ -246,103 +320,50 @@ function CategoriesPanel({
   categories: CatalogCategory[]
   isLoading: boolean
 }) {
-  const deleteMutation = useDeleteCategory()
-
   if (isLoading) {
     return (
-      <div className="space-y-2">
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-10 w-full" />
+      <div className="space-y-4">
+        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-32 w-full" />
       </div>
     )
   }
 
+  const grouped = DEPT_ORDER.map((dept) => ({
+    department: dept,
+    categories: categories.filter((c) => c.department === dept),
+  })).filter((g) => g.categories.length > 0)
+
   return (
-    <Card className="border-border/50">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Tags className="h-4 w-4 text-brand" />
-            Categories
-          </CardTitle>
-          <CategoryFormDialog
-            trigger={
-              <Button size="sm" className="gap-1.5">
-                <Plus className="h-3.5 w-3.5" />
-                Add Category
-              </Button>
-            }
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">
+          {categories.length} categories across {grouped.length} department{grouped.length !== 1 ? 's' : ''}
+        </p>
+        <CategoryFormDialog
+          trigger={
+            <Button size="sm" className="gap-1.5">
+              <Plus className="h-3.5 w-3.5" />
+              Add Category
+            </Button>
+          }
+        />
+      </div>
+
+      {grouped.length === 0 ? (
+        <p className="py-12 text-center text-sm text-muted-foreground">
+          No categories yet. Add your first category to get started.
+        </p>
+      ) : (
+        grouped.map((g) => (
+          <DepartmentCategorySection
+            key={g.department}
+            department={g.department}
+            categories={g.categories}
           />
-        </div>
-      </CardHeader>
-      <CardContent>
-        {categories.length === 0 ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">
-            No categories yet. Add your first category to get started.
-          </p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border/50 text-left text-xs text-muted-foreground">
-                  <th className="pb-2 pr-4 font-medium">Name</th>
-                  <th className="pb-2 pr-4 font-medium">Department</th>
-                  <th className="pb-2 pr-4 font-medium">Icon</th>
-                  <th className="pb-2 pr-4 font-medium">Status</th>
-                  <th className="pb-2 font-medium text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/30">
-                {categories.map((cat) => (
-                  <tr key={cat.id}>
-                    <td className="py-2.5 pr-4 font-medium">{cat.name}</td>
-                    <td className="py-2.5 pr-4">
-                      <Badge
-                        variant="outline"
-                        className={getDepartmentBadgeClass(cat.department)}
-                      >
-                        {DEPARTMENT_MAP[cat.department] ?? cat.department}
-                      </Badge>
-                    </td>
-                    <td className="py-2.5 pr-4 text-muted-foreground">{cat.icon || '—'}</td>
-                    <td className="py-2.5 pr-4">
-                      <Badge
-                        variant="outline"
-                        className={
-                          cat.isActive
-                            ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
-                            : 'border-border text-muted-foreground'
-                        }
-                      >
-                        {cat.isActive ? 'Active' : 'Inactive'}
-                      </Badge>
-                    </td>
-                    <td className="py-2.5">
-                      <div className="flex items-center justify-end gap-1">
-                        <CategoryFormDialog
-                          category={cat}
-                          trigger={
-                            <Button variant="ghost" size="icon-sm">
-                              <Pencil className="h-3.5 w-3.5" />
-                            </Button>
-                          }
-                        />
-                        <DeleteDialog
-                          label={cat.name}
-                          onConfirm={() => deleteMutation.mutate(cat.id)}
-                          isPending={deleteMutation.isPending}
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+        ))
+      )}
+    </div>
   )
 }
 
@@ -505,6 +526,81 @@ function ServiceFormDialog({
   )
 }
 
+function DepartmentServiceSection({
+  department,
+  categories,
+  services,
+}: {
+  department: string
+  categories: CatalogCategory[]
+  services: CatalogService[]
+}) {
+  const deleteMutation = useDeleteService()
+  const colors = DEPT_COLORS[department] ?? DEPT_COLORS.physical_dept
+
+  return (
+    <Card className={`${colors.border} overflow-hidden`}>
+      <div className={`${colors.headerBg} border-b ${colors.border} px-5 py-3`}>
+        <h3 className={`text-sm font-bold ${colors.text}`}>
+          {DEPT_LABELS[department] ?? department}
+        </h3>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          {services.length} service{services.length !== 1 ? 's' : ''} across {categories.length} categor{categories.length !== 1 ? 'ies' : 'y'}
+        </p>
+      </div>
+      <CardContent className="p-0">
+        {categories.map((cat) => {
+          const catServices = services.filter((s) => s.categoryId === cat.id)
+          if (catServices.length === 0) return null
+          return (
+            <div key={cat.id} className="border-b border-border/30 last:border-b-0">
+              <div className="flex items-center justify-between bg-muted/30 px-5 py-2">
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  {cat.name}
+                </span>
+                <span className="text-[11px] text-muted-foreground">
+                  {catServices.length} service{catServices.length !== 1 ? 's' : ''}
+                </span>
+              </div>
+              <div className="divide-y divide-border/20">
+                {catServices.map((svc) => (
+                  <div key={svc.id} className="flex items-center gap-4 px-5 py-2.5">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate">{svc.name}</p>
+                      {svc.description && (
+                        <p className="text-[11px] text-muted-foreground truncate">{svc.description}</p>
+                      )}
+                    </div>
+                    <span className="shrink-0 text-sm font-semibold tabular-nums text-muted-foreground">
+                      {formatCurrency(svc.basePrice)}
+                    </span>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <ServiceFormDialog
+                        service={svc}
+                        categories={categories}
+                        trigger={
+                          <Button variant="ghost" size="icon-sm">
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                        }
+                      />
+                      <DeleteDialog
+                        label={svc.name}
+                        onConfirm={() => deleteMutation.mutate(svc.id)}
+                        isPending={deleteMutation.isPending}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
+        })}
+      </CardContent>
+    </Card>
+  )
+}
+
 function ServicesPanel({
   services,
   categories,
@@ -514,115 +610,57 @@ function ServicesPanel({
   categories: CatalogCategory[]
   isLoading: boolean
 }) {
-  const deleteMutation = useDeleteService()
-
-  const categoryMap = new Map(categories.map((c) => [c.id, c]))
-
   if (isLoading) {
     return (
-      <div className="space-y-2">
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-10 w-full" />
+      <div className="space-y-4">
+        <Skeleton className="h-48 w-full" />
+        <Skeleton className="h-48 w-full" />
       </div>
     )
   }
 
+  const catMap = new Map(categories.map((c) => [c.id, c]))
+  const grouped = DEPT_ORDER.map((dept) => ({
+    department: dept,
+    categories: categories.filter((c) => c.department === dept),
+    services: services.filter((s) => {
+      const cat = catMap.get(s.categoryId)
+      return cat?.department === dept
+    }),
+  })).filter((g) => g.services.length > 0)
+
   return (
-    <Card className="border-border/50">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Wrench className="h-4 w-4 text-brand" />
-            Services
-          </CardTitle>
-          <ServiceFormDialog
-            categories={categories}
-            trigger={
-              <Button size="sm" className="gap-1.5">
-                <Plus className="h-3.5 w-3.5" />
-                Add Service
-              </Button>
-            }
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">
+          {services.length} services across {categories.length} categories
+        </p>
+        <ServiceFormDialog
+          categories={categories}
+          trigger={
+            <Button size="sm" className="gap-1.5">
+              <Plus className="h-3.5 w-3.5" />
+              Add Service
+            </Button>
+          }
+        />
+      </div>
+
+      {grouped.length === 0 ? (
+        <p className="py-12 text-center text-sm text-muted-foreground">
+          No services yet. Add your first service to get started.
+        </p>
+      ) : (
+        grouped.map((g) => (
+          <DepartmentServiceSection
+            key={g.department}
+            department={g.department}
+            categories={g.categories}
+            services={g.services}
           />
-        </div>
-      </CardHeader>
-      <CardContent>
-        {services.length === 0 ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">
-            No services yet. Add your first service to get started.
-          </p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border/50 text-left text-xs text-muted-foreground">
-                  <th className="pb-2 pr-4 font-medium">Name</th>
-                  <th className="pb-2 pr-4 font-medium">Category</th>
-                  <th className="pb-2 pr-4 font-medium">Base Price</th>
-                  <th className="pb-2 pr-4 font-medium">Status</th>
-                  <th className="pb-2 font-medium text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/30">
-                {services.map((svc) => {
-                  const cat = categoryMap.get(svc.categoryId)
-                  return (
-                    <tr key={svc.id}>
-                      <td className="py-2.5 pr-4 font-medium">{svc.name}</td>
-                      <td className="py-2.5 pr-4">
-                        <div className="flex items-center gap-1.5">
-                          {cat && (
-                            <Badge
-                              variant="outline"
-                              className={getDepartmentBadgeClass(cat.department)}
-                            >
-                              {DEPARTMENT_MAP[cat.department] ?? cat.department}
-                            </Badge>
-                          )}
-                          <span className="text-muted-foreground">{cat?.name ?? '—'}</span>
-                        </div>
-                      </td>
-                      <td className="py-2.5 pr-4 tabular-nums">{formatCurrency(svc.basePrice)}</td>
-                      <td className="py-2.5 pr-4">
-                        <Badge
-                          variant="outline"
-                          className={
-                            svc.isActive
-                              ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
-                              : 'border-border text-muted-foreground'
-                          }
-                        >
-                          {svc.isActive ? 'Active' : 'Inactive'}
-                        </Badge>
-                      </td>
-                      <td className="py-2.5">
-                        <div className="flex items-center justify-end gap-1">
-                          <ServiceFormDialog
-                            service={svc}
-                            categories={categories}
-                            trigger={
-                              <Button variant="ghost" size="icon-sm">
-                                <Pencil className="h-3.5 w-3.5" />
-                              </Button>
-                            }
-                          />
-                          <DeleteDialog
-                            label={svc.name}
-                            onConfirm={() => deleteMutation.mutate(svc.id)}
-                            isPending={deleteMutation.isPending}
-                          />
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+        ))
+      )}
+    </div>
   )
 }
 

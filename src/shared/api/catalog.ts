@@ -36,7 +36,7 @@ function mapMaterial(row: Record<string, unknown>): CatalogMaterial {
     unit: (row.unit as string) ?? '',
     sellingPrice: Number(row.selling_price ?? 0),
     stockOnHand: Number(row.stock_on_hand ?? 0),
-    isActive: row.is_active as boolean,
+    isActive: true,
   }
 }
 
@@ -62,8 +62,7 @@ export async function getCatalog(): Promise<CatalogData> {
       .order('name'),
     supabase
       .from('inventory_items')
-      .select('id, name, unit, selling_price, stock_on_hand, is_active')
-      .eq('is_active', true)
+      .select('id, name, unit, selling_price, stock_on_hand')
       .order('name'),
     supabase
       .from('service_material_prices')

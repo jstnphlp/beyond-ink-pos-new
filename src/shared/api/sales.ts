@@ -1,6 +1,6 @@
 import { supabase } from './supabase'
 import type { SelectedService, DeliveryInfo, Discount, PaymentMethod } from '@/stores/pos-store'
-import { MATERIALS, SERVICES, SERVICE_CATEGORIES } from '@/stores/pos-store'
+import { resolveMaterials } from '@/stores/pos-store'
 import type { StaffMember } from './staff.types'
 
 function slugToUuid(slug: string): string {
@@ -26,45 +26,9 @@ function slugToUuid(slug: string): string {
   )
 }
 
-let catalogSynced = false
-
-async function ensureCatalogSynced() {
-  if (catalogSynced) return
-
-  const categoryRows = SERVICE_CATEGORIES.map((cat) => ({
-    id: slugToUuid(cat.id),
-    name: cat.name,
-    department:
-      cat.department === 'Physical'
-        ? 'physical_dept'
-        : cat.department === 'Design'
-          ? 'design_dept'
-          : 'dev_dept',
-  }))
-
-  const serviceRows = SERVICES.map((svc) => ({
-    id: slugToUuid(svc.id),
-    name: svc.name,
-    category_id: svc.categoryId ? slugToUuid(svc.categoryId) : null,
-  }))
-
-  const itemRows = MATERIALS.map((mat) => ({
-    id: mat.id,
-    name: mat.name,
-    unit: mat.unit,
-  }))
-
-  const [catRes, svcRes, itemRes] = await Promise.all([
-    supabase.from('service_categories').upsert(categoryRows, { onConflict: 'id' }),
-    supabase.from('services').upsert(serviceRows, { onConflict: 'id' }),
-    supabase.from('inventory_items').upsert(itemRows, { onConflict: 'id' }),
-  ])
-
-  if (catRes.error) throw catRes.error
-  if (svcRes.error) throw svcRes.error
-  if (itemRes.error) throw itemRes.error
-
-  catalogSynced = true
+function resolveId(id: string): string {
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-/.test(id)) return id
+  return slugToUuid(id)
 }
 
 interface CompleteSaleParams {
@@ -78,6 +42,7 @@ interface CompleteSaleParams {
   total: number
   cashierName?: string
   contributors?: StaffMember[]
+  catalog?: import('@/shared/api/catalog.types').CatalogData | null
 }
 
 export async function completeSale(params: CompleteSaleParams) {
@@ -91,19 +56,20 @@ export async function completeSale(params: CompleteSaleParams) {
     total,
     cashierName = 'Staff',
     contributors = [],
+    catalog = null,
   } = params
 
-  await ensureCatalogSynced()
+  const materials = resolveMaterials(catalog)
 
   const changeDue =
     paymentMethod === 'cash' ? Math.max(0, cashReceived - total) : 0
 
   const services = selectedServices.map((ss, i) => {
     const material = ss.materialId
-      ? MATERIALS.find((m) => m.id === ss.materialId)
+      ? materials.find((m) => m.id === ss.materialId)
       : null
     return {
-      serviceId: slugToUuid(ss.service.id),
+      serviceId: resolveId(ss.service.id),
       serviceName: ss.service.name,
       quantity: ss.quantity,
       sortOrder: i,
