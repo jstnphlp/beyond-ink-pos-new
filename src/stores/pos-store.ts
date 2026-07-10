@@ -485,18 +485,20 @@ export const usePosStore = create<PosState>((set, get) => ({
   // Draft
   currentDraftId: null,
   setCurrentDraftId: (id) => set({ currentDraftId: id }),
-  loadDraft: (id, payload) =>
+  loadDraft: (id, payload) => {
+    const services = payload.selectedServices ?? []
     set({
       currentDraftId: id,
-      currentStep: payload.currentStep,
-      selectedCategoryIds: [...new Set(payload.selectedServices.map((s) => s.service.categoryId))],
-      selectedServices: payload.selectedServices,
-      delivery: payload.delivery,
-      discount: payload.discount,
+      currentStep: payload.currentStep ?? 1,
+      selectedCategoryIds: [...new Set(services.map((s) => s.service?.categoryId).filter(Boolean))],
+      selectedServices: services,
+      delivery: payload.delivery ?? { enabled: false, fee: 0, customerName: '', address: '' },
+      discount: payload.discount ?? { type: 'percentage', value: 0 },
       paymentMethod: null,
       cashReceived: 0,
       isProcessing: false,
-    }),
+    })
+  },
   isSavingDraft: false,
   setIsSavingDraft: (v) => set({ isSavingDraft: v }),
 }))

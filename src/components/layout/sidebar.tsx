@@ -56,7 +56,7 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex flex-1 flex-col gap-1 px-3 py-4">
+      <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-4">
         {visibleItems.map((item) => (
           <NavLink
             key={item.to}
