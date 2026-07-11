@@ -41,8 +41,12 @@ export async function createPosUser(params: {
       role: params.role,
       department: params.department ?? null,
     })
+    .select()
 
-  if (error) throw error
+  if (error) {
+    console.error('createPosUser failed:', error)
+    throw new Error(error.message)
+  }
 }
 
 export async function updatePosUser(
@@ -62,8 +66,12 @@ export async function updatePosUser(
     .from('allowed_users')
     .update(updates)
     .eq('id', id)
+    .select()
 
-  if (error) throw error
+  if (error) {
+    console.error('updatePosUser failed:', error)
+    throw new Error(error.message)
+  }
 }
 
 export async function deletePosUser(id: string): Promise<void> {
@@ -71,6 +79,10 @@ export async function deletePosUser(id: string): Promise<void> {
     .from('allowed_users')
     .delete()
     .eq('id', id)
+    .select()
 
-  if (error) throw error
+  if (error) {
+    console.error('deletePosUser failed:', error)
+    throw new Error(error.message)
+  }
 }

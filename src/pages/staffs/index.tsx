@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo, memo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   getPosUsers,
@@ -75,10 +75,12 @@ function UserFormDialog({
   mode,
   user,
   trigger,
+  isNonNativeTrigger,
 }: {
   mode: 'create' | 'edit'
   user?: PosUser
   trigger: React.ReactNode
+  isNonNativeTrigger?: boolean
 }) {
   const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
@@ -163,7 +165,7 @@ function UserFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger render={trigger} />
+      <DialogTrigger render={trigger} {...(isNonNativeTrigger ? { nativeButton: false } : {})} />
       <DialogPopup>
         <DialogTitle>{mode === 'create' ? 'Add User' : 'Edit User'}</DialogTitle>
         <DialogDescription className="mt-1.5">
@@ -310,7 +312,7 @@ function DeleteUserDialog({
   )
 }
 
-function UserRow({ user }: { user: PosUser }) {
+const UserRow = memo(function UserRow({ user }: { user: PosUser }) {
   const [deleteOpen, setDeleteOpen] = useState(false)
 
   return (
@@ -355,6 +357,7 @@ function UserRow({ user }: { user: PosUser }) {
             <UserFormDialog
               mode="edit"
               user={user}
+              isNonNativeTrigger
               trigger={
                 <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                   <Pencil className="h-4 w-4" />
@@ -380,7 +383,7 @@ function UserRow({ user }: { user: PosUser }) {
       <DeleteUserDialog user={user} open={deleteOpen} onOpenChange={setDeleteOpen} />
     </>
   )
-}
+})
 
 export function StaffsPage() {
   const { data: users, isLoading } = useQuery({
@@ -388,8 +391,8 @@ export function StaffsPage() {
     queryFn: getPosUsers,
   })
 
-  const ownerCount = (users ?? []).filter((u) => u.role === 'owner').length
-  const staffCount = (users ?? []).filter((u) => u.role === 'staff').length
+  const ownerCount = useMemo(() => (users ?? []).filter((u) => u.role === 'owner').length, [users])
+  const staffCount = useMemo(() => (users ?? []).filter((u) => u.role === 'staff').length, [users])
 
   return (
     <div className="space-y-6 p-4 md:p-6">

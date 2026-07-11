@@ -72,7 +72,6 @@ model InventoryItem {
   createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   inventoryMovements InventoryMovement[]
-  materialEntries    SalesMaterialEntry[]
   materialPrices     ServiceMaterialPrice[]
 
   @@map("inventory_items")
@@ -118,7 +117,6 @@ model Service {
   createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
 
   category       ServiceCategory?      @relation(fields: [categoryId], references: [id])
-  serviceLines   SalesServiceLine[]
   materialPrices ServiceMaterialPrice[]
 
   @@map("services")
@@ -192,7 +190,6 @@ model SalesServiceLine {
   createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   transaction   SalesTransaction      @relation(fields: [transactionId], references: [id])
-  service       Service               @relation(fields: [serviceId], references: [id])
   materialEntries SalesMaterialEntry[]
 
   @@map("sales_service_lines")
@@ -208,7 +205,6 @@ model SalesMaterialEntry {
   createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   serviceLine  SalesServiceLine   @relation(fields: [serviceLineId], references: [id])
-  inventoryItem InventoryItem     @relation(fields: [inventoryItemId], references: [id])
   addOnEntries  SalesAddOnEntry[]
 
   @@map("sales_material_entries")

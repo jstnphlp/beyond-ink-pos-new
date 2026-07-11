@@ -32,21 +32,21 @@ DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.schemata WHERE schema_name = 'auth') THEN
 
-    -- allowed_users: owners can CRUD all rows
+    -- allowed_users: owners can CRUD all rows (uses get_user_role() SECURITY DEFINER to avoid circular RLS)
     EXECUTE 'ALTER TABLE public.allowed_users ENABLE ROW LEVEL SECURITY';
     EXECUTE 'CREATE POLICY "allowed_users_select_owner" ON public.allowed_users FOR SELECT TO authenticated USING (
-      EXISTS (SELECT 1 FROM public.allowed_users WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid()) AND role = ''owner'')
+      public.get_user_role() = ''owner''
     )';
     EXECUTE 'CREATE POLICY "allowed_users_insert_owner" ON public.allowed_users FOR INSERT TO authenticated WITH CHECK (
-      EXISTS (SELECT 1 FROM public.allowed_users WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid()) AND role = ''owner'')
+      public.get_user_role() = ''owner''
     )';
     EXECUTE 'CREATE POLICY "allowed_users_update_owner" ON public.allowed_users FOR UPDATE TO authenticated USING (
-      EXISTS (SELECT 1 FROM public.allowed_users WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid()) AND role = ''owner'')
+      public.get_user_role() = ''owner''
     ) WITH CHECK (
-      EXISTS (SELECT 1 FROM public.allowed_users WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid()) AND role = ''owner'')
+      public.get_user_role() = ''owner''
     )';
     EXECUTE 'CREATE POLICY "allowed_users_delete_owner" ON public.allowed_users FOR DELETE TO authenticated USING (
-      EXISTS (SELECT 1 FROM public.allowed_users WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid()) AND role = ''owner'')
+      public.get_user_role() = ''owner''
     )';
 
     -- staff_members

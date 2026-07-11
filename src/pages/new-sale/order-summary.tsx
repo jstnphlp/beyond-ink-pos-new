@@ -120,10 +120,9 @@ export function OrderSummary() {
       })
       resetSale()
     } catch (err) {
-      console.error('Sale failed:', err)
-      toast.error('Failed to save sale', {
-        description: err instanceof Error ? err.message : 'Something went wrong',
-      })
+      console.error('Sale failed:', JSON.stringify(err, null, 2), err)
+      const msg = err instanceof Error ? err.message : (err as any)?.message ?? (err as any)?.details ?? 'Something went wrong'
+      toast.error('Failed to save sale', { description: msg })
     } finally {
       setIsProcessing(false)
     }
