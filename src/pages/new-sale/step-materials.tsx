@@ -1,4 +1,5 @@
 import { usePosStore, resolveMaterials, resolveMaterialsForService } from '@/stores/pos-store'
+import { useState, useCallback } from 'react'
 import { Input } from '@/components/ui/input'
 import { AlertTriangle, Minus, Plus, Package } from 'lucide-react'
 
@@ -6,10 +7,63 @@ export function StepMaterials() {
   const {
     selectedServices,
     updateServiceMaterial,
+    updateServiceMaterialPrice,
     updateServiceQuantity,
     catalog,
   } = usePosStore()
   const materials = resolveMaterials(catalog)
+  const [qtyDrafts, setQtyDrafts] = useState<Record<string, string>>({})
+  const [priceDrafts, setPriceDrafts] = useState<Record<string, string>>({})
+
+  const handlePriceChange = useCallback((serviceId: string, raw: string) => {
+    setPriceDrafts((prev) => ({ ...prev, [serviceId]: raw }))
+    if (raw === '') {
+      updateServiceMaterialPrice(serviceId, null)
+    } else {
+      const parsed = parseFloat(raw)
+      if (!isNaN(parsed)) {
+        updateServiceMaterialPrice(serviceId, parsed)
+      }
+    }
+  }, [updateServiceMaterialPrice])
+
+  const handlePriceBlur = useCallback((serviceId: string, raw: string) => {
+    const parsed = parseFloat(raw)
+    if (isNaN(parsed) || parsed < 0) {
+      updateServiceMaterialPrice(serviceId, null)
+    } else {
+      updateServiceMaterialPrice(serviceId, parsed)
+    }
+    setPriceDrafts((prev) => {
+      const next = { ...prev }
+      delete next[serviceId]
+      return next
+    })
+  }, [updateServiceMaterialPrice])
+
+  const handleQuantityChange = useCallback((serviceId: string, raw: string) => {
+    setQtyDrafts((prev) => ({ ...prev, [serviceId]: raw }))
+    if (raw !== '' && raw !== '0') {
+      const parsed = parseInt(raw, 10)
+      if (!isNaN(parsed) && parsed > 0) {
+        updateServiceQuantity(serviceId, parsed)
+      }
+    }
+  }, [updateServiceQuantity])
+
+  const handleQuantityBlur = useCallback((serviceId: string, raw: string) => {
+    const parsed = parseInt(raw, 10)
+    if (isNaN(parsed) || parsed < 1) {
+      updateServiceQuantity(serviceId, 1)
+    } else {
+      updateServiceQuantity(serviceId, parsed)
+    }
+    setQtyDrafts((prev) => {
+      const next = { ...prev }
+      delete next[serviceId]
+      return next
+    })
+  }, [updateServiceQuantity])
 
   if (selectedServices.length === 0) {
     return (
@@ -87,16 +141,32 @@ export function StepMaterials() {
                 {ss.materialId && (() => {
                   const mat = materials.find((m) => m.id === ss.materialId)
                   if (!mat) return null
-                  const unitPrice = mat.pricePerUnit
+                  const unitPrice = ss.customMaterialPrice ?? mat.pricePerUnit
+                  const displayPrice = priceDrafts[ss.service.id] ?? String(unitPrice)
                   const lineTotal = unitPrice * ss.quantity
                   return (
-                    <div className="mt-2 flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2">
-                      <span className="text-xs text-muted-foreground">
-                        ₱{unitPrice.toLocaleString()}/{mat.unit}
-                      </span>
-                      <span className="text-sm font-semibold tabular-nums">
-                        ₱{lineTotal.toLocaleString()}
-                      </span>
+                    <div className="mt-2 space-y-2">
+                      <div className="flex items-center gap-2 rounded-lg bg-muted/50 px-3 py-2">
+                        <span className="text-xs text-muted-foreground shrink-0">₱</span>
+                        <Input
+                          type="number"
+                          min={0}
+                          step="any"
+                          value={displayPrice}
+                          onChange={(e) => handlePriceChange(ss.service.id, e.target.value)}
+                          onBlur={(e) => handlePriceBlur(ss.service.id, e.target.value)}
+                          className="h-7 flex-1 border-0 bg-transparent px-0 text-sm font-medium tabular-nums focus-visible:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        />
+                        <span className="text-xs text-muted-foreground shrink-0">/{mat.unit}</span>
+                      </div>
+                      <div className="flex items-center justify-between px-1">
+                        <span className="text-[11px] text-muted-foreground">
+                          Default: ₱{mat.pricePerUnit.toLocaleString()}/{mat.unit}
+                        </span>
+                        <span className="text-sm font-semibold tabular-nums">
+                          ₱{lineTotal.toLocaleString()}
+                        </span>
+                      </div>
                     </div>
                   )
                 })()}
@@ -123,13 +193,9 @@ export function StepMaterials() {
                   <Input
                     type="number"
                     min={1}
-                    value={ss.quantity}
-                    onChange={(e) =>
-                      updateServiceQuantity(
-                        ss.service.id,
-                        parseInt(e.target.value) || 1
-                      )
-                    }
+                    value={qtyDrafts[ss.service.id] ?? ss.quantity}
+                    onChange={(e) => handleQuantityChange(ss.service.id, e.target.value)}
+                    onBlur={(e) => handleQuantityBlur(ss.service.id, e.target.value)}
                     className="h-10 flex-1 border-0 border-x border-border text-center text-sm font-semibold rounded-none focus-visible:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
                   <button

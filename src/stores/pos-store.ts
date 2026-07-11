@@ -36,6 +36,7 @@ export interface SelectedService {
   service: Service
   materialId: string | null
   quantity: number
+  customMaterialPrice: number | null
 }
 
 export interface DeliveryInfo {
@@ -310,6 +311,7 @@ interface PosState {
   selectedServices: SelectedService[]
   toggleService: (service: Service) => void
   updateServiceMaterial: (serviceId: string, materialId: string) => void
+  updateServiceMaterialPrice: (serviceId: string, price: number | null) => void
   updateServiceQuantity: (serviceId: string, quantity: number) => void
 
   // Delivery
@@ -346,6 +348,7 @@ interface PosState {
 
   // Draft
   currentDraftId: string | null
+  draftName: string
   setCurrentDraftId: (id: string | null) => void
   loadDraft: (id: string, payload: DraftPayload) => void
   isSavingDraft: boolean
@@ -383,17 +386,23 @@ export const usePosStore = create<PosState>((set, get) => ({
       if (exists) {
         return { selectedServices: s.selectedServices.filter((ss) => ss.service.id !== service.id) }
       }
-      return {
+        return {
         selectedServices: [
           ...s.selectedServices,
-          { service, materialId: null, quantity: 1 },
+          { service, materialId: null, quantity: 1, customMaterialPrice: null },
         ],
       }
     }),
   updateServiceMaterial: (serviceId, materialId) =>
     set((s) => ({
       selectedServices: s.selectedServices.map((ss) =>
-        ss.service.id === serviceId ? { ...ss, materialId } : ss
+        ss.service.id === serviceId ? { ...ss, materialId, customMaterialPrice: null } : ss
+      ),
+    })),
+  updateServiceMaterialPrice: (serviceId, price) =>
+    set((s) => ({
+      selectedServices: s.selectedServices.map((ss) =>
+        ss.service.id === serviceId ? { ...ss, customMaterialPrice: price } : ss
       ),
     })),
   updateServiceQuantity: (serviceId, quantity) =>
@@ -433,7 +442,8 @@ export const usePosStore = create<PosState>((set, get) => ({
       if (!ss.materialId) return total
       const mat = materials.find((m) => m.id === ss.materialId)
       if (!mat) return total
-      return total + mat.pricePerUnit * ss.quantity
+      const unitPrice = ss.customMaterialPrice ?? mat.pricePerUnit
+      return total + unitPrice * ss.quantity
     }, 0)
   },
   getDiscountAmount: () => {
@@ -480,15 +490,21 @@ export const usePosStore = create<PosState>((set, get) => ({
       contributors: [],
       isProcessing: false,
       currentDraftId: null,
+      draftName: '',
     }),
 
   // Draft
   currentDraftId: null,
+  draftName: '',
   setCurrentDraftId: (id) => set({ currentDraftId: id }),
   loadDraft: (id, payload) => {
-    const services = payload.selectedServices ?? []
+    const services = (payload.selectedServices ?? []).map((s) => ({
+      ...s,
+      customMaterialPrice: s.customMaterialPrice ?? null,
+    }))
     set({
       currentDraftId: id,
+      draftName: payload.name ?? '',
       currentStep: payload.currentStep ?? 1,
       selectedCategoryIds: [...new Set(services.map((s) => s.service?.categoryId).filter(Boolean))],
       selectedServices: services,

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { usePosStore, resolveMaterials } from '@/stores/pos-store'
 import { completeSale } from '@/shared/api/sales'
 import { saveDraft, updateDraft } from '@/shared/api/drafts'
@@ -47,6 +47,7 @@ export function OrderSummary() {
     resetSale,
     currentDraftId,
     setCurrentDraftId,
+    draftName: storeDraftName,
     isSavingDraft,
     setIsSavingDraft,
   } = usePosStore()
@@ -55,12 +56,46 @@ export function OrderSummary() {
 
   const [draftName, setDraftName] = useState('')
   const [dialogOpen, setDialogOpen] = useState(false)
+  const autoSavedRef = useRef<string | null>(null)
 
   const subtotal = getSubtotal()
   const discountAmount = getDiscountAmount()
   const total = getTotal()
   const deliveryFee = delivery.enabled ? delivery.fee : 0
   const completable = isCompletable()
+
+  useEffect(() => {
+    if (
+      currentDraftId &&
+      selectedServices.length > 0 &&
+      autoSavedRef.current !== currentDraftId &&
+      !isSavingDraft
+    ) {
+      autoSavedRef.current = currentDraftId
+      const state = usePosStore.getState()
+      const params = {
+        name: state.draftName || undefined,
+        selectedServices: state.selectedServices,
+        delivery: state.delivery,
+        discount: state.discount,
+        currentStep: state.currentStep,
+        subtotal: state.getSubtotal(),
+        total: state.getTotal(),
+        cashierName,
+      }
+      setIsSavingDraft(true)
+      updateDraft(currentDraftId, params)
+        .then(() => {
+          queryClient.invalidateQueries({ queryKey: ['drafts'] })
+        })
+        .catch((err) => {
+          console.error('Auto-save draft failed:', err)
+        })
+        .finally(() => {
+          setIsSavingDraft(false)
+        })
+    }
+  }, [currentDraftId, selectedServices.length])
 
   const handleCompleteSale = async () => {
     setIsProcessing(true)
@@ -137,8 +172,42 @@ export function OrderSummary() {
       toast.error('Add at least one service before saving a draft.')
       return
     }
-    setDraftName('')
-    setDialogOpen(true)
+    if (currentDraftId) {
+      handleSaveDraftDirect()
+    } else {
+      setDraftName('')
+      setDialogOpen(true)
+    }
+  }
+
+  const handleSaveDraftDirect = async () => {
+    setIsSavingDraft(true)
+    try {
+      const params = {
+        name: storeDraftName || undefined,
+        selectedServices,
+        delivery,
+        discount,
+        currentStep,
+        subtotal,
+        total,
+        cashierName,
+      }
+
+      await updateDraft(currentDraftId!, params)
+      toast.success('Draft updated', {
+        description: `Draft saved — ₱${total.toLocaleString()}`,
+      })
+      queryClient.invalidateQueries({ queryKey: ['drafts'] })
+      resetSale()
+    } catch (err) {
+      console.error('Save draft failed:', err)
+      toast.error('Failed to save draft', {
+        description: err instanceof Error ? err.message : 'Something went wrong',
+      })
+    } finally {
+      setIsSavingDraft(false)
+    }
   }
 
   return (
@@ -176,10 +245,10 @@ export function OrderSummary() {
                 : null
 
               const unitPrice = material
-                ? material.pricePerUnit
+                ? (ss.customMaterialPrice ?? material.pricePerUnit)
                 : null
               const lineTotal = material
-                ? material.pricePerUnit * ss.quantity
+                ? (ss.customMaterialPrice ?? material.pricePerUnit) * ss.quantity
                 : null
 
               return (
@@ -261,60 +330,76 @@ export function OrderSummary() {
 
         {/* Action buttons */}
         <div className="flex gap-2 border-t border-border px-5 py-4">
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger
+          {currentDraftId ? (
+            <button
+              type="button"
               className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-input bg-background px-4 py-2.5 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50"
               disabled={isSavingDraft || selectedServices.length === 0}
-              onClick={(e) => {
-                e.preventDefault()
-                handleDraftButtonClick()
-              }}
+              onClick={() => handleDraftButtonClick()}
             >
               {isSavingDraft ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <Save className="h-4 w-4" />
               )}
-              {currentDraftId ? 'Update Draft' : 'Save Draft'}
-            </DialogTrigger>
-            <DialogPopup>
-              <DialogTitle>Save Draft</DialogTitle>
-              <DialogDescription className="mt-1.5">
-                Optionally name this draft for easy identification.
-              </DialogDescription>
-              <div className="mt-4">
-                <Input
-                  placeholder="e.g. Maria's print order"
-                  value={draftName}
-                  onChange={(e) => setDraftName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleSaveDraft()
-                  }}
-                  autoFocus
-                />
-              </div>
-              <div className="mt-5 flex justify-end gap-2">
-                <DialogClose
-                  className="inline-flex items-center justify-center rounded-lg border border-input bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
-                  onClick={() => setDraftName('')}
-                >
-                  Cancel
-                </DialogClose>
-                <Button
-                  onClick={handleSaveDraft}
-                  disabled={isSavingDraft}
-                  className="gap-1.5"
-                >
-                  {isSavingDraft ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Save className="h-4 w-4" />
-                  )}
-                  Save
-                </Button>
-              </div>
-            </DialogPopup>
-          </Dialog>
+              Update Draft
+            </button>
+          ) : (
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger
+                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-input bg-background px-4 py-2.5 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50"
+                disabled={isSavingDraft || selectedServices.length === 0}
+                onClick={(e) => {
+                  e.preventDefault()
+                  handleDraftButtonClick()
+                }}
+              >
+                {isSavingDraft ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+                Save Draft
+              </DialogTrigger>
+              <DialogPopup>
+                <DialogTitle>Save Draft</DialogTitle>
+                <DialogDescription className="mt-1.5">
+                  Optionally name this draft for easy identification.
+                </DialogDescription>
+                <div className="mt-4">
+                  <Input
+                    placeholder="e.g. Maria's print order"
+                    value={draftName}
+                    onChange={(e) => setDraftName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSaveDraft()
+                    }}
+                    autoFocus
+                  />
+                </div>
+                <div className="mt-5 flex justify-end gap-2">
+                  <DialogClose
+                    className="inline-flex items-center justify-center rounded-lg border border-input bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
+                    onClick={() => setDraftName('')}
+                  >
+                    Cancel
+                  </DialogClose>
+                  <Button
+                    onClick={handleSaveDraft}
+                    disabled={isSavingDraft}
+                    className="gap-1.5"
+                  >
+                    {isSavingDraft ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Save className="h-4 w-4" />
+                    )}
+                    Save
+                  </Button>
+                </div>
+              </DialogPopup>
+            </Dialog>
+          )}
 
           <Button
             size="lg"

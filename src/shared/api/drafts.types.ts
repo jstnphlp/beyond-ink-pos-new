@@ -7,6 +7,7 @@ export interface DraftPayload {
     service: Service
     materialId: string | null
     quantity: number
+    customMaterialPrice?: number | null
   }>
   delivery: DeliveryInfo
   discount: Discount
