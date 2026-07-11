@@ -92,9 +92,18 @@ const DEPT_ICON_COLOR: Record<Department, string> = {
 }
 
 export function StepCategory() {
-  const { selectedCategoryIds, toggleCategory, selectedServices, catalog } = usePosStore()
+  const { selectedCategoryIds, toggleCategory, selectedServices, catalog, userDepartment } = usePosStore()
   const categories = resolveCategories(catalog)
   const services = resolveServices(catalog)
+
+  const DEPT_FILTER_MAP: Record<string, Department> = {
+    physical_dept: 'Physical',
+    design_dept: 'Design',
+    dev_dept: 'Dev',
+  }
+  const filteredCategories = userDepartment
+    ? categories.filter((c) => c.department === DEPT_FILTER_MAP[userDepartment])
+    : categories
 
   const getCategorySelectedCount = (categoryId: string) =>
     selectedServices.filter((ss) => ss.service.categoryId === categoryId).length
@@ -120,7 +129,7 @@ export function StepCategory() {
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        {categories.map((category) => {
+        {filteredCategories.map((category) => {
           const Icon = ICON_MAP[category.icon] ?? FileText
           const count = getCategorySelectedCount(category.id)
           const isSelected = selectedCategoryIds.includes(category.id)

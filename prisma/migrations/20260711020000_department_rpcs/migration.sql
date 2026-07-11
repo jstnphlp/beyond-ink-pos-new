@@ -150,7 +150,11 @@ LANGUAGE plpgsql
 AS $$
 BEGIN
   UPDATE staff_sessions
+<<<<<<< HEAD
   SET time_out = (date_trunc('day', time_in) + INTERVAL '13 hours'),
+=======
+  SET time_out = (date_trunc('day', time_in) + INTERVAL '21 hours'),
+>>>>>>> e5e3e5313bf1851080dc92d186d0c5678766de48
       auto_logged_out = true
   WHERE time_out IS NULL
     AND time_in < (now() - INTERVAL '12 hours');

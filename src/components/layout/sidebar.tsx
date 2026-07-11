@@ -10,6 +10,7 @@ import {
   Wallet,
   ChartPie,
   Wrench,
+  UserCog,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/shared/hooks/use-auth'
@@ -30,12 +31,19 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/wallet', label: 'Wallet', icon: Wallet, roles: ['owner'] },
   { to: '/distributions', label: 'Distributions', icon: ChartPie, roles: ['owner'] },
   { to: '/services', label: 'Services', icon: Wrench, roles: ['owner'] },
+  { to: '/staffs', label: 'Staffs', icon: UserCog, roles: ['owner'] },
   { to: '/staff', label: 'Staff Shifts', icon: Users, roles: ['owner', 'staff'] },
-  { to: '/settings', label: 'Settings', icon: Settings, roles: ['owner'] },
+  { to: '/settings', label: 'Settings', icon: Settings, roles: ['owner', 'staff'] },
 ]
 
+const DEPT_LABELS: Record<string, string> = {
+  physical_dept: 'Physical',
+  design_dept: 'Design',
+  dev_dept: 'Development',
+}
+
 export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
-  const { role, displayName, signOut } = useAuth()
+  const { role, department, displayName, signOut } = useAuth()
 
   const visibleItems = NAV_ITEMS.filter(
     (item) => role && item.roles.includes(role)
@@ -96,7 +104,7 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           {displayName}
         </p>
         <p className="text-[10px] font-medium tracking-widest text-muted-foreground uppercase">
-          {role === 'owner' ? 'Owner' : 'Staff'}
+          {role === 'owner' ? 'Owner' : department ? DEPT_LABELS[department] ?? 'Staff' : 'Staff'}
         </p>
         <Button
           variant="ghost"

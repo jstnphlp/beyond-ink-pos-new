@@ -48,6 +48,7 @@ export function OrderSummary() {
     currentDraftId,
     setCurrentDraftId,
     draftName: storeDraftName,
+    userDepartment,
     isSavingDraft,
     setIsSavingDraft,
   } = usePosStore()
@@ -112,16 +113,16 @@ export function OrderSummary() {
         cashierName,
         contributors,
         catalog,
+        department: userDepartment ?? 'physical_dept',
       })
       toast.success('Sale completed', {
         description: `Transaction saved — Total: ₱${total.toLocaleString()}`,
       })
       resetSale()
     } catch (err) {
-      console.error('Sale failed:', err)
-      toast.error('Failed to save sale', {
-        description: err instanceof Error ? err.message : 'Something went wrong',
-      })
+      console.error('Sale failed:', JSON.stringify(err, null, 2), err)
+      const msg = err instanceof Error ? err.message : (err as any)?.message ?? (err as any)?.details ?? 'Something went wrong'
+      toast.error('Failed to save sale', { description: msg })
     } finally {
       setIsProcessing(false)
     }
@@ -240,16 +241,17 @@ export function OrderSummary() {
         ) : (
           <div className="space-y-0 divide-y divide-border/40 py-3">
             {selectedServices.map((ss) => {
-              const material = ss.materialId
+              const isDesignDev = ss.service.department === 'Design' || ss.service.department === 'Dev'
+              const material = !isDesignDev && ss.materialId
                 ? materials.find((m) => m.id === ss.materialId)
                 : null
 
-              const unitPrice = material
-                ? (ss.customMaterialPrice ?? material.pricePerUnit)
-                : null
-              const lineTotal = material
-                ? (ss.customMaterialPrice ?? material.pricePerUnit) * ss.quantity
-                : null
+              const unitPrice = isDesignDev
+                ? (ss.customMaterialPrice ?? ss.service.basePrice)
+                : material
+                  ? (ss.customMaterialPrice ?? material.pricePerUnit)
+                  : null
+              const lineTotal = unitPrice !== null ? unitPrice * ss.quantity : null
 
               return (
                 <div key={ss.service.id} className="py-3">
@@ -259,9 +261,9 @@ export function OrderSummary() {
                       <p className="text-sm font-medium">
                         {ss.service.name}
                       </p>
-                      {material && (
+                      {unitPrice !== null && (
                         <p className="text-[11px] text-muted-foreground">
-                          ₱{unitPrice!.toLocaleString()}/{material.unit} × {ss.quantity}
+                          ₱{unitPrice.toLocaleString()}{material ? `/${material.unit}` : ''} × {ss.quantity}
                         </p>
                       )}
                     </div>
