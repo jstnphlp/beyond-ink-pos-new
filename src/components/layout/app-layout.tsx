@@ -2,12 +2,13 @@ import { Outlet } from 'react-router-dom'
 import { Sidebar } from './sidebar'
 import { Header } from './header'
 import { Toaster } from 'sonner'
-import { CatalogSync } from '@/components/catalog-sync'
+import { CatalogSync, DepartmentSync } from '@/components/catalog-sync'
 
 export function AppLayout() {
   return (
     <div className="flex min-h-screen bg-background">
       <CatalogSync />
+      <DepartmentSync />
       <Sidebar />
       <div className="flex flex-1 flex-col md:pl-64">
         <Header />

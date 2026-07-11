@@ -299,6 +299,10 @@ interface PosState {
   nextStep: () => void
   prevStep: () => void
 
+  // Department filter (set from auth user's department)
+  userDepartment: string | null
+  setUserDepartment: (dept: string | null) => void
+
   // Catalog (from DB)
   catalog: CatalogData | null
   setCatalog: (data: CatalogData) => void
@@ -362,6 +366,10 @@ export const usePosStore = create<PosState>((set, get) => ({
   nextStep: () => set((s) => ({ currentStep: Math.min(s.currentStep + 1, 5) })),
   prevStep: () => set((s) => ({ currentStep: Math.max(s.currentStep - 1, 1) })),
 
+  // Department filter
+  userDepartment: null,
+  setUserDepartment: (dept) => set({ userDepartment: dept }),
+
   // Catalog
   catalog: null,
   setCatalog: (data) => set({ catalog: data }),
@@ -386,10 +394,11 @@ export const usePosStore = create<PosState>((set, get) => ({
       if (exists) {
         return { selectedServices: s.selectedServices.filter((ss) => ss.service.id !== service.id) }
       }
-        return {
+      const isDesignDev = service.department === 'Design' || service.department === 'Dev'
+      return {
         selectedServices: [
           ...s.selectedServices,
-          { service, materialId: null, quantity: 1, customMaterialPrice: null },
+          { service, materialId: null, quantity: 1, customMaterialPrice: isDesignDev ? service.basePrice : null },
         ],
       }
     }),
@@ -439,6 +448,11 @@ export const usePosStore = create<PosState>((set, get) => ({
     const { selectedServices, catalog } = get()
     const materials = resolveMaterials(catalog)
     return selectedServices.reduce((total, ss) => {
+      const isDesignDev = ss.service.department === 'Design' || ss.service.department === 'Dev'
+      if (isDesignDev) {
+        const unitPrice = ss.customMaterialPrice ?? ss.service.basePrice
+        return total + unitPrice * ss.quantity
+      }
       if (!ss.materialId) return total
       const mat = materials.find((m) => m.id === ss.materialId)
       if (!mat) return total

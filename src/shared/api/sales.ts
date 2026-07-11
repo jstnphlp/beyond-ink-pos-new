@@ -43,6 +43,7 @@ interface CompleteSaleParams {
   cashierName?: string
   contributors?: StaffMember[]
   catalog?: import('@/shared/api/catalog.types').CatalogData | null
+  department?: string
 }
 
 export async function completeSale(params: CompleteSaleParams) {
@@ -57,6 +58,7 @@ export async function completeSale(params: CompleteSaleParams) {
     cashierName = 'Staff',
     contributors = [],
     catalog = null,
+    department = 'physical_dept',
   } = params
 
   const materials = resolveMaterials(catalog)
@@ -65,14 +67,21 @@ export async function completeSale(params: CompleteSaleParams) {
     paymentMethod === 'cash' ? Math.max(0, cashReceived - total) : 0
 
   const services = selectedServices.map((ss, i) => {
-    const material = ss.materialId
+    const isDesignDev = ss.service.department === 'Design' || ss.service.department === 'Dev'
+    const material = !isDesignDev && ss.materialId
       ? materials.find((m) => m.id === ss.materialId)
       : null
+    const unitPrice = isDesignDev
+      ? (ss.customMaterialPrice ?? ss.service.basePrice)
+      : material
+        ? (ss.customMaterialPrice ?? material.pricePerUnit)
+        : null
     return {
       serviceId: resolveId(ss.service.id),
       serviceName: ss.service.name,
       quantity: ss.quantity,
       sortOrder: i,
+      unitPrice,
       material: material
         ? { id: material.id, name: material.name, pricePerUnit: material.pricePerUnit }
         : null,
@@ -94,6 +103,7 @@ export async function completeSale(params: CompleteSaleParams) {
     p_gcash_amount_paid: paymentMethod === 'gcash' ? total : null,
     p_change_due: paymentMethod === 'cash' ? changeDue : null,
     p_cashier_name: cashierName,
+    p_department: department,
   })
 
   if (error) throw error

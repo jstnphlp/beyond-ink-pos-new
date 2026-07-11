@@ -1,3 +1,6 @@
+-- CreateSchema
+CREATE SCHEMA IF NOT EXISTS "public";
+
 -- CreateEnum
 CREATE TYPE "TransactionStatus" AS ENUM ('draft', 'completed', 'cancelled');
 
@@ -10,12 +13,20 @@ CREATE TYPE "DiscountType" AS ENUM ('fixed', 'percentage');
 -- CreateEnum
 CREATE TYPE "MovementType" AS ENUM ('sale_deduction', 'manual_adjustment', 'purchase_receipt');
 
+-- CreateEnum
+CREATE TYPE "user_role" AS ENUM ('owner', 'staff');
+
+-- CreateEnum
+CREATE TYPE "user_department" AS ENUM ('physical_dept', 'design_dept', 'dev_dept');
+
 -- CreateTable
 CREATE TABLE "allowed_users" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "email" TEXT NOT NULL,
+    "name" TEXT,
+    "role" "user_role" NOT NULL DEFAULT 'staff',
+    "department" "user_department",
     "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "role" TEXT NOT NULL DEFAULT 'physical_dept',
 
     CONSTRAINT "allowed_users_pkey" PRIMARY KEY ("id")
 );
@@ -28,6 +39,7 @@ CREATE TABLE "inventory_items" (
     "stock_on_hand" DECIMAL(10,2) NOT NULL DEFAULT 0,
     "low_stock_threshold" DECIMAL(10,2) NOT NULL DEFAULT 0,
     "cost_per_unit" DECIMAL(10,2) NOT NULL DEFAULT 0,
+    "selling_price" DECIMAL(10,2) NOT NULL DEFAULT 0,
     "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "inventory_items_pkey" PRIMARY KEY ("id")
@@ -50,6 +62,7 @@ CREATE TABLE "service_categories" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "name" TEXT NOT NULL,
     "department" TEXT NOT NULL DEFAULT 'physical_dept',
+    "icon" TEXT NOT NULL DEFAULT '',
     "is_active" BOOLEAN NOT NULL DEFAULT true,
     "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -61,6 +74,9 @@ CREATE TABLE "services" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "name" TEXT NOT NULL,
     "category_id" UUID,
+    "description" TEXT NOT NULL DEFAULT '',
+    "base_price" DECIMAL(10,2) NOT NULL DEFAULT 0,
+    "icon" TEXT NOT NULL DEFAULT '',
     "is_active" BOOLEAN NOT NULL DEFAULT true,
     "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -157,8 +173,20 @@ CREATE TABLE "sales_add_on_entries" (
 );
 
 -- CreateTable
+CREATE TABLE "staff_members" (
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "name" TEXT NOT NULL,
+    "department" TEXT NOT NULL DEFAULT 'physical_dept',
+    "is_active" BOOLEAN NOT NULL DEFAULT true,
+    "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "staff_members_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "staff_sessions" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "staff_member_id" UUID NOT NULL,
     "staff_name" TEXT NOT NULL,
     "time_in" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "time_out" TIMESTAMPTZ,
@@ -168,11 +196,65 @@ CREATE TABLE "staff_sessions" (
     CONSTRAINT "staff_sessions_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "transaction_contributors" (
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "transaction_id" UUID NOT NULL,
+    "staff_member_id" UUID NOT NULL,
+    "staff_name" TEXT NOT NULL,
+    "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "transaction_contributors_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "distribution_payouts" (
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "staff_member_id" UUID,
+    "staff_name" TEXT,
+    "department" TEXT NOT NULL,
+    "period_from" TIMESTAMPTZ NOT NULL,
+    "period_to" TIMESTAMPTZ NOT NULL,
+    "amount" DECIMAL(10,2) NOT NULL DEFAULT 0,
+    "given" BOOLEAN NOT NULL DEFAULT false,
+    "given_at" TIMESTAMPTZ,
+    "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "distribution_payouts_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "allowed_users_email_key" ON "allowed_users"("email");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "sales_transactions_transaction_number_key" ON "sales_transactions"("transaction_number");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "staff_members_name_key" ON "staff_members"("name");
+
+-- CreateIndex
+CREATE INDEX "staff_sessions_staff_member_id_time_in_idx" ON "staff_sessions"("staff_member_id", "time_in");
+
+-- CreateIndex
+CREATE INDEX "staff_sessions_time_out_time_in_idx" ON "staff_sessions"("time_out", "time_in");
+
+-- CreateIndex
+CREATE INDEX "transaction_contributors_transaction_id_idx" ON "transaction_contributors"("transaction_id");
+
+-- CreateIndex
+CREATE INDEX "transaction_contributors_staff_member_id_idx" ON "transaction_contributors"("staff_member_id");
+
+-- CreateIndex
+CREATE INDEX "distribution_payouts_staff_member_id_idx" ON "distribution_payouts"("staff_member_id");
+
+-- CreateIndex
+CREATE INDEX "distribution_payouts_period_from_period_to_idx" ON "distribution_payouts"("period_from", "period_to");
+
+-- CreateIndex
+CREATE INDEX "distribution_payouts_department_idx" ON "distribution_payouts"("department");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "distribution_payouts_department_period_from_period_to_key" ON "distribution_payouts"("department", "period_from", "period_to");
 
 -- AddForeignKey
 ALTER TABLE "inventory_movements" ADD CONSTRAINT "inventory_movements_inventory_item_id_fkey" FOREIGN KEY ("inventory_item_id") REFERENCES "inventory_items"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -206,3 +288,15 @@ ALTER TABLE "sales_add_on_entries" ADD CONSTRAINT "sales_add_on_entries_material
 
 -- AddForeignKey
 ALTER TABLE "sales_add_on_entries" ADD CONSTRAINT "sales_add_on_entries_add_on_id_fkey" FOREIGN KEY ("add_on_id") REFERENCES "add_ons"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "staff_sessions" ADD CONSTRAINT "staff_sessions_staff_member_id_fkey" FOREIGN KEY ("staff_member_id") REFERENCES "staff_members"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "transaction_contributors" ADD CONSTRAINT "transaction_contributors_transaction_id_fkey" FOREIGN KEY ("transaction_id") REFERENCES "sales_transactions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "transaction_contributors" ADD CONSTRAINT "transaction_contributors_staff_member_id_fkey" FOREIGN KEY ("staff_member_id") REFERENCES "staff_members"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "distribution_payouts" ADD CONSTRAINT "distribution_payouts_staff_member_id_fkey" FOREIGN KEY ("staff_member_id") REFERENCES "staff_members"("id") ON DELETE SET NULL ON UPDATE CASCADE;
