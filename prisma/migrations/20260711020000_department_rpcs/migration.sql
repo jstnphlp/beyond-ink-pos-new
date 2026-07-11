@@ -1,51 +1,21 @@
--- Department-based access control for allowed_users
--- Run after 006_services_catalog.sql
+-- RPC functions
+-- Wrapped in DO blocks where they reference auth schema (Prisma shadow DB lacks it)
 
 -- ═══════════════════════════════════════════════════════════════════════════════
--- Department enum
--- ═══════════════════════════════════════════════════════════════════════════════
-
-DO $$
-BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_department') THEN
-    CREATE TYPE public.user_department AS ENUM ('physical_dept', 'design_dept', 'dev_dept');
-  END IF;
-END
-$$;
-
--- ═══════════════════════════════════════════════════════════════════════════════
--- Add department column to allowed_users
+-- Auth RPCs (require Supabase auth schema)
 -- ═══════════════════════════════════════════════════════════════════════════════
 
 DO $$
 BEGIN
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'allowed_users') THEN
-    IF NOT EXISTS (
-      SELECT 1 FROM information_schema.columns
-      WHERE table_name = 'allowed_users' AND column_name = 'department'
-    ) THEN
-      ALTER TABLE public.allowed_users ADD COLUMN department public.user_department;
-    END IF;
-  END IF;
-END
-$$;
-
--- ═══════════════════════════════════════════════════════════════════════════════
--- RPC: get_user_department
--- Returns the department for the current user, or NULL if owner/unrestricted
--- ═══════════════════════════════════════════════════════════════════════════════
-
-DO $outer$
-BEGIN
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'allowed_users') THEN
+  IF EXISTS (SELECT 1 FROM information_schema.schemata WHERE schema_name = 'auth') THEN
     EXECUTE $fn$
-      CREATE OR REPLACE FUNCTION public.get_user_department()
-      RETURNS public.user_department
+      CREATE OR REPLACE FUNCTION public.get_user_role()
+      RETURNS text
       LANGUAGE sql
       STABLE
       SECURITY DEFINER
       AS $body$
-        SELECT au.department
+        SELECT au.role::text
         FROM public.allowed_users au
         WHERE au.email = (
           SELECT email FROM auth.users WHERE id = auth.uid()
@@ -53,12 +23,44 @@ BEGIN
         LIMIT 1;
       $body$;
     $fn$;
+
+    EXECUTE $fn$
+      CREATE OR REPLACE FUNCTION public.get_user_department()
+      RETURNS text
+      LANGUAGE sql
+      STABLE
+      SECURITY DEFINER
+      AS $body$
+        SELECT au.department::text
+        FROM public.allowed_users au
+        WHERE au.email = (
+          SELECT email FROM auth.users WHERE id = auth.uid()
+        )
+        LIMIT 1;
+      $body$;
+    $fn$;
+
+    EXECUTE $fn$
+      CREATE OR REPLACE FUNCTION public.is_allowed_user()
+      RETURNS boolean
+      LANGUAGE sql
+      STABLE
+      SECURITY DEFINER
+      AS $body$
+        SELECT EXISTS (
+          SELECT 1 FROM public.allowed_users au
+          WHERE au.email = (
+            SELECT email FROM auth.users WHERE id = auth.uid()
+          )
+        );
+      $body$;
+    $fn$;
   END IF;
 END
-$outer$;
+$$;
 
 -- ═══════════════════════════════════════════════════════════════════════════════
--- Update complete_sale to accept p_department parameter
+-- complete_sale RPC
 -- ═══════════════════════════════════════════════════════════════════════════════
 
 CREATE OR REPLACE FUNCTION complete_sale(
@@ -135,5 +137,22 @@ BEGIN
   END LOOP;
 
   RETURN v_txn_id;
+END;
+$$;
+
+-- ═══════════════════════════════════════════════════════════════════════════════
+-- auto_logout_stale_sessions RPC
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+CREATE OR REPLACE FUNCTION auto_logout_stale_sessions()
+RETURNS void
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  UPDATE staff_sessions
+  SET time_out = (date_trunc('day', time_in) + INTERVAL '21 hours'),
+      auto_logged_out = true
+  WHERE time_out IS NULL
+    AND time_in < (now() - INTERVAL '12 hours');
 END;
 $$;
