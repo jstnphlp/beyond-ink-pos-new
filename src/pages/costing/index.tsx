@@ -45,10 +45,10 @@ export function CostingPage() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="profiles" className="mt-4">
+        <TabsContent value="profiles" className="mt-4" keepMounted>
           <CostProfilesPanel />
         </TabsContent>
-        <TabsContent value="quotes" className="mt-4">
+        <TabsContent value="quotes" className="mt-4" keepMounted>
           <QuotePlaygroundPanel />
         </TabsContent>
       </Tabs>

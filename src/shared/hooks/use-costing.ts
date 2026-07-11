@@ -8,6 +8,7 @@ import {
   getQuote,
   createQuote,
   updateQuote,
+  replaceQuote,
   deleteQuote,
   getMarginThresholds,
   updateMarginThresholds,
@@ -115,6 +116,19 @@ export function useDeleteQuote() {
       toast.success('Quote deleted')
     },
     onError: () => toast.error('Failed to delete quote'),
+  })
+}
+
+export function useReplaceQuote() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: CreateQuoteInput }) =>
+      replaceQuote(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: costingKeys.quotes() })
+      toast.success('Quote updated')
+    },
+    onError: () => toast.error('Failed to update quote'),
   })
 }
 

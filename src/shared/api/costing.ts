@@ -237,6 +237,40 @@ export async function updateQuote(
   if (error) throw error
 }
 
+export async function replaceQuote(id: string, data: CreateQuoteInput) {
+  const { error: metaError } = await supabase
+    .from('quotes')
+    .update({ name: data.name, notes: data.notes ?? null })
+    .eq('id', id)
+  if (metaError) throw metaError
+
+  const { error: delError } = await supabase
+    .from('quote_line_items')
+    .delete()
+    .eq('quote_id', id)
+  if (delError) throw delError
+
+  if (data.lineItems.length > 0) {
+    const rows = data.lineItems.map((li, i) => ({
+      quote_id: id,
+      cost_profile_id: li.costProfileId,
+      quantity: li.quantity,
+      snap_material_cost: li.snapMaterialCost,
+      snap_ink_cost: li.snapInkCost,
+      snap_overhead_cost: li.snapOverheadCost,
+      snap_spoilage_rate: li.snapSpoilageRate,
+      snap_selling_price: li.snapSellingPrice,
+      override_price: li.overridePrice ?? null,
+      sort_order: i,
+    }))
+
+    const { error: linesError } = await supabase
+      .from('quote_line_items')
+      .insert(rows)
+    if (linesError) throw linesError
+  }
+}
+
 export async function deleteQuote(id: string) {
   const { error } = await supabase.from('quotes').delete().eq('id', id)
   if (error) throw error

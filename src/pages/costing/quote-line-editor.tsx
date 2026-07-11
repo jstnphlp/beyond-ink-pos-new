@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Trash2 } from 'lucide-react'
@@ -40,6 +40,54 @@ function lowestViablePrice(line: QuoteLine, goodThreshold: number): number {
     line.materialCost + spoilageAmount + line.inkCost + line.overheadCost
   if (goodThreshold >= 100) return unitCost * 100
   return unitCost / (1 - goodThreshold / 100)
+}
+
+function EditableNumberCell({
+  value,
+  onChange,
+  min = 0,
+  step = 0.01,
+  width = 'w-20',
+}: {
+  value: number
+  onChange: (val: number) => void
+  min?: number
+  step?: number
+  width?: string
+}) {
+  const [draft, setDraft] = useState(value.toString())
+
+  useEffect(() => {
+    setDraft(value.toString())
+  }, [value])
+
+  function commit() {
+    const parsed = parseFloat(draft)
+    if (isNaN(parsed) || parsed < min) {
+      setDraft(value.toString())
+    } else if (parsed !== value) {
+      onChange(parsed)
+    }
+  }
+
+  return (
+    <Input
+      type="number"
+      min={min}
+      step={step}
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') commit()
+        if (e.key === 'Escape') {
+          setDraft(value.toString())
+          e.currentTarget.blur()
+        }
+      }}
+      className={`ml-auto h-7 ${width} text-right tabular-nums`}
+    />
+  )
 }
 
 export function QuoteLineEditor({
@@ -105,7 +153,7 @@ export function QuoteLineEditor({
           <select
             value={selectedProfileId}
             onChange={(e) => setSelectedProfileId(e.target.value)}
-            className="border-input focus-visible:border-ring focus-visible:ring-ring/50 dark:bg-input/30 h-8 rounded-lg border bg-transparent px-2.5 text-sm outline-none focus-visible:ring-3 dark:text-foreground [&>option]:bg-popover [&>option]:text-popover-foreground"
+            className="border-input focus-visible:border-ring focus-visible:ring-ring/50 dark:bg-input/30 dark:text-foreground [&>option]:bg-popover [&>option]:text-popover-foreground h-8 rounded-lg border bg-transparent px-2.5 text-sm outline-none focus-visible:ring-3"
           >
             <option value="">Select a cost profile...</option>
             {availableProfiles.map((p) => (
@@ -128,7 +176,6 @@ export function QuoteLineEditor({
                 <th className="px-3 py-2 font-medium">Item</th>
                 <th className="px-3 py-2 text-right font-medium">Qty</th>
                 <th className="px-3 py-2 text-right font-medium">Unit Price</th>
-                <th className="px-3 py-2 text-right font-medium">Override</th>
                 <th className="px-3 py-2 text-right font-medium">Unit Cost</th>
                 <th className="px-3 py-2 text-right font-medium">Total</th>
                 <th className="px-3 py-2 text-right font-medium">Profit</th>
@@ -141,6 +188,7 @@ export function QuoteLineEditor({
               {lines.map((line) => {
                 const computed = computeLineTotal(line)
                 const lowest = lowestViablePrice(line, goodThreshold)
+                const activePrice = line.overridePrice ?? line.sellingPrice
                 return (
                   <tr key={line.id}>
                     <td className="px-3 py-2">
@@ -150,37 +198,23 @@ export function QuoteLineEditor({
                       </p>
                     </td>
                     <td className="px-3 py-2 text-right">
-                      <Input
-                        type="number"
-                        min="0.01"
-                        step="0.01"
+                      <EditableNumberCell
                         value={line.quantity}
-                        onChange={(e) =>
-                          updateLine(line.id, {
-                            quantity: parseFloat(e.target.value) || 1,
-                          })
-                        }
-                        className="ml-auto h-7 w-20 text-right tabular-nums"
+                        onChange={(v) => updateLine(line.id, { quantity: v })}
+                        min={0.01}
+                        step={0.01}
+                        width="w-20"
                       />
                     </td>
-                    <td className="text-muted-foreground px-3 py-2 text-right tabular-nums">
-                      {formatCurrency(line.sellingPrice)}
-                    </td>
                     <td className="px-3 py-2 text-right">
-                      <Input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={line.overridePrice?.toString() ?? ''}
-                        onChange={(e) => {
-                          const val = e.target.value
-                          updateLine(line.id, {
-                            overridePrice:
-                              val === '' ? null : parseFloat(val) || 0,
-                          })
-                        }}
-                        placeholder="—"
-                        className="ml-auto h-7 w-24 text-right tabular-nums"
+                      <EditableNumberCell
+                        value={activePrice}
+                        onChange={(v) =>
+                          updateLine(line.id, { overridePrice: v })
+                        }
+                        min={0}
+                        step={0.01}
+                        width="w-24"
                       />
                     </td>
                     <td className="text-muted-foreground px-3 py-2 text-right tabular-nums">

@@ -1,4 +1,11 @@
-import { createContext, useContext, useEffect, useState, useCallback } from 'react'
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+  useRef,
+} from 'react'
 import type { ReactNode } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
 import { supabase } from '@/shared/api/supabase'
@@ -41,6 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [department, setDepartment] = useState<UserDepartment>(null)
   const [displayName, setDisplayName] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const userIdRef = useRef<string | null>(null)
 
   const resolveUser = useCallback(async (sess: Session | null) => {
     if (!sess?.user?.email) {
@@ -68,16 +76,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session: initial } }) => {
       setSession(initial)
+      userIdRef.current = initial?.user?.id ?? null
       resolveUser(initial)
     })
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, sess) => {
-        setSession(sess)
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, sess) => {
+      setSession(sess)
+      const newUserId = sess?.user?.id ?? null
+      const oldUserId = userIdRef.current
+      userIdRef.current = newUserId
+      if (newUserId !== oldUserId) {
         setLoading(true)
         resolveUser(sess)
       }
-    )
+    })
 
     return () => subscription.unsubscribe()
   }, [resolveUser])
