@@ -6,11 +6,11 @@ import { CatalogSync, DepartmentSync } from '@/components/catalog-sync'
 
 export function AppLayout() {
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="bg-background flex min-h-screen">
       <CatalogSync />
       <DepartmentSync />
       <Sidebar />
-      <div className="flex flex-1 flex-col md:pl-64">
+      <div className="flex min-w-0 flex-1 flex-col md:pl-64">
         <Header />
         <main className="flex-1">
           <Outlet />
