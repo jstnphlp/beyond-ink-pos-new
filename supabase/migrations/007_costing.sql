@@ -68,83 +68,135 @@ ON CONFLICT (key) DO NOTHING;
 
 -- ═══════════════════════════════════════════════════════════════════════════════
 -- Seed cost_profiles from existing pricing spreadsheet
--- service_id and inventory_item_id match seeds in 006_services_catalog.sql
+-- Looks up service/material IDs by name so it works regardless of generated UUIDs
 -- ═══════════════════════════════════════════════════════════════════════════════
 
--- Standard Printing (Black) + papers
-INSERT INTO public.cost_profiles (service_id, inventory_item_id, material_cost, ink_cost) VALUES
-  ('3e837b1c-55c0-4022-8acb-59b86b43bb3e', 'c0000000-0000-0000-0000-000000000001', 0.47, 1.00),  -- Short/A4 — B&W
-  ('3e837b1c-55c0-4022-8acb-59b86b43bb3e', 'c0000000-0000-0000-0000-000000000002', 0.57, 1.00)   -- Long — B&W
+-- Standard Printing (Black)
+INSERT INTO public.cost_profiles (service_id, inventory_item_id, material_cost, ink_cost)
+SELECT s.id, m.id, v.mat, v.ink
+FROM (VALUES
+  ('Standard Printing (Black)', 'Standard Short Bondpaper', 0.47, 1.00),
+  ('Standard Printing (Black)', 'Standard Long Bondpaper',  0.57, 1.00)
+) AS v(svc_name, mat_name, mat, ink)
+JOIN public.services s ON s.name = v.svc_name
+JOIN public.inventory_items m ON m.name = v.mat_name
 ON CONFLICT (service_id, inventory_item_id) DO UPDATE SET material_cost = EXCLUDED.material_cost, ink_cost = EXCLUDED.ink_cost;
 
--- Standard Printing (Colored) + papers
-INSERT INTO public.cost_profiles (service_id, inventory_item_id, material_cost, ink_cost) VALUES
-  ('60e4d600-0954-4744-86e2-d80069b0b144', 'c0000000-0000-0000-0000-000000000003', 0.47, 2.00),  -- Short/A4 — Colored
-  ('60e4d600-0954-4744-86e2-d80069b0b144', 'c0000000-0000-0000-0000-000000000004', 0.57, 2.00)   -- Long — Colored
+-- Standard Printing (Colored)
+INSERT INTO public.cost_profiles (service_id, inventory_item_id, material_cost, ink_cost)
+SELECT s.id, m.id, v.mat, v.ink
+FROM (VALUES
+  ('Standard Printing (Colored)', 'Colored Short Bondpaper', 0.47, 2.00),
+  ('Standard Printing (Colored)', 'Colored Long Bondpaper',  0.57, 2.00)
+) AS v(svc_name, mat_name, mat, ink)
+JOIN public.services s ON s.name = v.svc_name
+JOIN public.inventory_items m ON m.name = v.mat_name
 ON CONFLICT (service_id, inventory_item_id) DO UPDATE SET material_cost = EXCLUDED.material_cost, ink_cost = EXCLUDED.ink_cost;
 
 -- Photo Printing
-INSERT INTO public.cost_profiles (service_id, inventory_item_id, material_cost, ink_cost) VALUES
-  ('12eb3c6e-63d9-4722-8dca-289c7132cb4c', 'c0000000-0000-0000-0000-000000000005', 0.33, 1.00),  -- 2R — Photoprint
-  ('14ed7e2b-59b7-4e17-88b7-3fdd4d5ac03c', 'c0000000-0000-0000-0000-000000000006', 4.10, 3.00),  -- 3R — Photoprint
-  ('12fa46f8-52de-4744-80f7-a1e04024c1bc', 'c0000000-0000-0000-0000-000000000007', 4.15, 3.00),  -- 4R — Photoprint
-  ('c62ca05f-bdb9-40a3-8c6a-2c7d7b9550fc', 'c0000000-0000-0000-0000-000000000008', 8.70, 5.00),  -- A4 — Photoprint
-  ('c62ca05f-bdb9-40a3-8c6a-2c7d7b9550fc', 'c0000000-0000-0000-0000-000000000034', 8.70, 5.00),  -- A4 Photo Print — Matte
-  ('98878d57-3fed-4e6b-8544-355da76a233c', 'c0000000-0000-0000-0000-000000000030', 4.15, 3.00)   -- 4R — Rush ID
+INSERT INTO public.cost_profiles (service_id, inventory_item_id, material_cost, ink_cost)
+SELECT s.id, m.id, v.mat, v.ink
+FROM (VALUES
+  ('2R Photo Print',  'Photo Paper Glossy 2R',  0.33, 1.00),
+  ('3R Photo Print',  'Photo Paper Glossy 3R',  4.10, 3.00),
+  ('4R Photo Print',  'Photo Paper Glossy 4R',  4.15, 3.00),
+  ('A4 Photo Print',  'Photo Paper Glossy A4',  8.70, 5.00),
+  ('A4 Photo Print',  'Photo Paper Matte A4',   8.70, 5.00),
+  ('Rush ID',         'ID Photo Paper',          4.15, 3.00)
+) AS v(svc_name, mat_name, mat, ink)
+JOIN public.services s ON s.name = v.svc_name
+JOIN public.inventory_items m ON m.name = v.mat_name
 ON CONFLICT (service_id, inventory_item_id) DO UPDATE SET material_cost = EXCLUDED.material_cost, ink_cost = EXCLUDED.ink_cost;
 
 -- Stickers
-INSERT INTO public.cost_profiles (service_id, inventory_item_id, material_cost, ink_cost) VALUES
-  ('7415f128-666a-4814-8464-1720127f793c', 'c0000000-0000-0000-0000-000000000009', 4.36, 5.00),  -- A4 Glossy Sticker
-  ('7415f128-666a-4814-8464-1720127f793c', 'c0000000-0000-0000-0000-000000000010', 6.40, 5.00),  -- A4 Matte Sticker
-  ('7415f128-666a-4814-8464-1720127f793c', 'c0000000-0000-0000-0000-000000000011', 9.10, 5.00)   -- A4 Vinyl Sticker
+INSERT INTO public.cost_profiles (service_id, inventory_item_id, material_cost, ink_cost)
+SELECT s.id, m.id, v.mat, v.ink
+FROM (VALUES
+  ('Custom Stickers/Labels', 'Sticker Paper Glossy A4', 4.36, 5.00),
+  ('Custom Stickers/Labels', 'Sticker Paper Matte A4',  6.40, 5.00),
+  ('Custom Stickers/Labels', 'Sticker Paper Vinyl A4',  9.10, 5.00)
+) AS v(svc_name, mat_name, mat, ink)
+JOIN public.services s ON s.name = v.svc_name
+JOIN public.inventory_items m ON m.name = v.mat_name
 ON CONFLICT (service_id, inventory_item_id) DO UPDATE SET material_cost = EXCLUDED.material_cost, ink_cost = EXCLUDED.ink_cost;
 
 -- Sintra Board
-INSERT INTO public.cost_profiles (service_id, inventory_item_id, material_cost, ink_cost) VALUES
-  ('6f70e9d8-1e5d-4064-8b93-5860712de9bc', 'c0000000-0000-0000-0000-000000000012', 35.40, 5.00)  -- Sintra Board with Sticker
+INSERT INTO public.cost_profiles (service_id, inventory_item_id, material_cost, ink_cost)
+SELECT s.id, m.id, 35.40, 5.00
+FROM public.services s, public.inventory_items m
+WHERE s.name = 'Sticker on Sintra Board' AND m.name = 'Sintra Board A4'
 ON CONFLICT (service_id, inventory_item_id) DO UPDATE SET material_cost = EXCLUDED.material_cost, ink_cost = EXCLUDED.ink_cost;
 
 -- Laminating
-INSERT INTO public.cost_profiles (service_id, inventory_item_id, material_cost, ink_cost) VALUES
-  ('251def70-13c6-4446-8c7b-38a036dbcb36', 'c0000000-0000-0000-0000-000000000013', 1.40, 1.00),  -- Hot Laminate ID
-  ('251def70-13c6-4446-8c7b-38a036dbcb36', 'c0000000-0000-0000-0000-000000000014', 6.50, 1.00),  -- Hot Laminate Half
-  ('251def70-13c6-4446-8c7b-38a036dbcb36', 'c0000000-0000-0000-0000-000000000015', 1.69, 1.00),  -- Hot Laminate A4
-  ('b7452ffa-e6ec-4658-895b-d9f051a9e9a2', 'c0000000-0000-0000-0000-000000000016', 9.00, 0.00)   -- Phototop/Coldtop A4
+INSERT INTO public.cost_profiles (service_id, inventory_item_id, material_cost, ink_cost)
+SELECT s.id, m.id, v.mat, v.ink
+FROM (VALUES
+  ('Hot Laminating',  'Laminating Film ID Size',   1.40, 1.00),
+  ('Hot Laminating',  'Laminating Film Half Size',  6.50, 1.00),
+  ('Hot Laminating',  'Laminating Film A4',         1.69, 1.00),
+  ('Phototop/Coldtop','Coldtop Film A4',            9.00, 0.00)
+) AS v(svc_name, mat_name, mat, ink)
+JOIN public.services s ON s.name = v.svc_name
+JOIN public.inventory_items m ON m.name = v.mat_name
 ON CONFLICT (service_id, inventory_item_id) DO UPDATE SET material_cost = EXCLUDED.material_cost, ink_cost = EXCLUDED.ink_cost;
 
 -- Certificates & Awards
-INSERT INTO public.cost_profiles (service_id, inventory_item_id, material_cost, ink_cost) VALUES
-  ('45ec6270-8622-406e-8983-4c20c3ce121e', 'c0000000-0000-0000-0000-000000000017', 8.40, 4.00),  -- Cert Specialty
-  ('45ec6270-8622-406e-8983-4c20c3ce121e', 'c0000000-0000-0000-0000-000000000018', 2.75, 4.00),  -- Cert Parchment
-  ('45ec6270-8622-406e-8983-4c20c3ce121e', 'c0000000-0000-0000-0000-000000000019', 5.50, 4.00)   -- Cert Linen
+INSERT INTO public.cost_profiles (service_id, inventory_item_id, material_cost, ink_cost)
+SELECT s.id, m.id, v.mat, v.ink
+FROM (VALUES
+  ('Certificates & Award', 'Certificate Paper Specialty', 8.40, 4.00),
+  ('Certificates & Award', 'Certificate Paper Parchment', 2.75, 4.00),
+  ('Certificates & Award', 'Certificate Paper Linen',     5.50, 4.00)
+) AS v(svc_name, mat_name, mat, ink)
+JOIN public.services s ON s.name = v.svc_name
+JOIN public.inventory_items m ON m.name = v.mat_name
 ON CONFLICT (service_id, inventory_item_id) DO UPDATE SET material_cost = EXCLUDED.material_cost, ink_cost = EXCLUDED.ink_cost;
 
 -- Flyers & Brochures
-INSERT INTO public.cost_profiles (service_id, inventory_item_id, material_cost, ink_cost) VALUES
-  ('f9007b52-41de-4178-8003-c070b8deaa2a', 'c0000000-0000-0000-0000-000000000028', 3.54, 5.00),  -- Brochure Paper A4
-  ('f9007b52-41de-4178-8003-c070b8deaa2a', 'c0000000-0000-0000-0000-000000000029', 3.54, 5.00),  -- Flyer Paper A4
-  ('f9007b52-41de-4178-8003-c070b8deaa2a', 'c0000000-0000-0000-0000-000000000036', 1.69, 5.00)   -- Inkjet Paper A4
+INSERT INTO public.cost_profiles (service_id, inventory_item_id, material_cost, ink_cost)
+SELECT s.id, m.id, v.mat, v.ink
+FROM (VALUES
+  ('Flyers/Tri-Fold Brochures', 'Brochure Paper A4', 3.54, 5.00),
+  ('Flyers/Tri-Fold Brochures', 'Flyer Paper A4',    3.54, 5.00),
+  ('Flyers/Tri-Fold Brochures', 'Inkjet Paper A4',   1.69, 5.00)
+) AS v(svc_name, mat_name, mat, ink)
+JOIN public.services s ON s.name = v.svc_name
+JOIN public.inventory_items m ON m.name = v.mat_name
 ON CONFLICT (service_id, inventory_item_id) DO UPDATE SET material_cost = EXCLUDED.material_cost, ink_cost = EXCLUDED.ink_cost;
 
 -- Business Cards & Invitation Cards
-INSERT INTO public.cost_profiles (service_id, inventory_item_id, material_cost, ink_cost) VALUES
-  ('dd8da488-ad9f-4688-8eb0-184070121200', 'c0000000-0000-0000-0000-000000000026', 4.00, 5.00),  -- Business Card
-  ('5148a58b-1492-47ff-80a0-927545da0274', 'c0000000-0000-0000-0000-000000000027', 2.00, 5.00)   -- Invitation Card
+INSERT INTO public.cost_profiles (service_id, inventory_item_id, material_cost, ink_cost)
+SELECT s.id, m.id, v.mat, v.ink
+FROM (VALUES
+  ('Business Cards',    'Business Card Paper',    4.00, 5.00),
+  ('Invitation Card',   'Invitation Card Paper',  2.00, 5.00)
+) AS v(svc_name, mat_name, mat, ink)
+JOIN public.services s ON s.name = v.svc_name
+JOIN public.inventory_items m ON m.name = v.mat_name
 ON CONFLICT (service_id, inventory_item_id) DO UPDATE SET material_cost = EXCLUDED.material_cost, ink_cost = EXCLUDED.ink_cost;
 
 -- Magazines
-INSERT INTO public.cost_profiles (service_id, inventory_item_id, material_cost, ink_cost) VALUES
-  ('2f43b49c-d81e-4ea8-8a0c-0e60f75d7a34', 'c0000000-0000-0000-0000-000000000020', 3.54, 5.00),  -- Magazine A4 Colored
-  ('12a4170b-5f22-48b9-84f6-6ef34d864fb2', 'c0000000-0000-0000-0000-000000000021', 2.00, 1.00)   -- Magazine A5 Colored
+INSERT INTO public.cost_profiles (service_id, inventory_item_id, material_cost, ink_cost)
+SELECT s.id, m.id, v.mat, v.ink
+FROM (VALUES
+  ('Magazine (A4, Colored)', 'C2S Paper 120gsm A4', 3.54, 5.00),
+  ('Magazine (A5, Colored)', 'C2S Paper 120gsm A5', 2.00, 1.00)
+) AS v(svc_name, mat_name, mat, ink)
+JOIN public.services s ON s.name = v.svc_name
+JOIN public.inventory_items m ON m.name = v.mat_name
 ON CONFLICT (service_id, inventory_item_id) DO UPDATE SET material_cost = EXCLUDED.material_cost, ink_cost = EXCLUDED.ink_cost;
 
 -- Book Binding
-INSERT INTO public.cost_profiles (service_id, inventory_item_id, material_cost, ink_cost) VALUES
-  ('09fd9dd0-cea5-4e6c-81ba-f3c0c758e3bc', 'c0000000-0000-0000-0000-000000000025', 12.00, 0.00),  -- Staple Bind
-  ('b4c3d7c8-2425-4112-8701-741090e6c6da', 'c0000000-0000-0000-0000-000000000022', 15.00, 0.00),  -- Spiral/Coil Bind
-  ('56c738cf-5126-425b-84f1-3f9507e1aa94', 'c0000000-0000-0000-0000-000000000023', 10.00, 0.00),  -- Tape Bind
-  ('dcd98bac-31d4-4bc6-82a3-ab08ed0d706a', 'c0000000-0000-0000-0000-000000000024', 80.00, 0.00)   -- Hard-Bound
+INSERT INTO public.cost_profiles (service_id, inventory_item_id, material_cost, ink_cost)
+SELECT s.id, m.id, v.mat, v.ink
+FROM (VALUES
+  ('Staple Binding',       'Staple Wire',          12.00, 0.00),
+  ('Spiral/Coil Binding',  'Spiral Coil',          15.00, 0.00),
+  ('Tape Binding',         'Tape Binding Strip',   10.00, 0.00),
+  ('Hard-Bound Binding',   'Book Board (Hardbound)',80.00, 0.00)
+) AS v(svc_name, mat_name, mat, ink)
+JOIN public.services s ON s.name = v.svc_name
+JOIN public.inventory_items m ON m.name = v.mat_name
 ON CONFLICT (service_id, inventory_item_id) DO UPDATE SET material_cost = EXCLUDED.material_cost, ink_cost = EXCLUDED.ink_cost;
 
 -- ═══════════════════════════════════════════════════════════════════════════════
