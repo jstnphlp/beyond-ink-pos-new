@@ -1,4 +1,4 @@
-import { useState, useMemo, memo, type ReactElement } from 'react'
+import { useState, useMemo, memo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   getPosUsers,
@@ -79,7 +79,7 @@ function UserFormDialog({
 }: {
   mode: 'create' | 'edit'
   user?: PosUser
-  trigger: ReactElement
+  trigger: React.ReactNode
   isNonNativeTrigger?: boolean
 }) {
   const queryClient = useQueryClient()

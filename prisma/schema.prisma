@@ -73,6 +73,7 @@ model InventoryItem {
 
   inventoryMovements InventoryMovement[]
   materialPrices     ServiceMaterialPrice[]
+  costProfiles       CostProfile[]
 
   @@map("inventory_items")
 }
@@ -118,6 +119,7 @@ model Service {
 
   category       ServiceCategory?      @relation(fields: [categoryId], references: [id])
   materialPrices ServiceMaterialPrice[]
+  costProfiles   CostProfile[]
 
   @@map("services")
 }
@@ -291,4 +293,66 @@ model DistributionPayout {
   @@index([periodFrom, periodTo])
   @@index([department])
   @@map("distribution_payouts")
+}
+
+// ─── Costing ──────────────────────────────────────────────────────────────────
+
+model CostProfile {
+  id              String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  serviceId       String  @map("service_id") @db.Uuid
+  inventoryItemId String  @map("inventory_item_id") @db.Uuid
+  materialCost    Decimal @default(0) @map("material_cost") @db.Decimal(10, 2)
+  inkCost         Decimal @default(0) @map("ink_cost") @db.Decimal(10, 2)
+  spoilageRate    Decimal @default(0) @map("spoilage_rate") @db.Decimal(5, 2)
+  isActive        Boolean @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  service       Service       @relation(fields: [serviceId], references: [id])
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id])
+  quoteLineItems QuoteLineItem[]
+
+  @@unique([serviceId, inventoryItemId])
+  @@map("cost_profiles")
+}
+
+model Quote {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String   @db.Text
+  notes     String?  @db.Text
+  createdBy String   @map("created_by") @db.Text
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  lineItems QuoteLineItem[]
+
+  @@map("quotes")
+}
+
+model QuoteLineItem {
+  id               String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  quoteId          String  @map("quote_id") @db.Uuid
+  costProfileId    String  @map("cost_profile_id") @db.Uuid
+  quantity         Decimal @default(1) @db.Decimal(10, 2)
+  snapMaterialCost Decimal @default(0) @map("snap_material_cost") @db.Decimal(10, 2)
+  snapInkCost      Decimal @default(0) @map("snap_ink_cost") @db.Decimal(10, 2)
+  snapOverheadCost Decimal @default(0) @map("snap_overhead_cost") @db.Decimal(10, 2)
+  snapSpoilageRate Decimal @default(0) @map("snap_spoilage_rate") @db.Decimal(5, 2)
+  snapSellingPrice Decimal @default(0) @map("snap_selling_price") @db.Decimal(10, 2)
+  overridePrice    Decimal? @map("override_price") @db.Decimal(10, 2)
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
+  sortOrder        Int     @default(0) @map("sort_order")
+
+  quote        Quote       @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  costProfile  CostProfile @relation(fields: [costProfileId], references: [id])
+
+  @@map("quote_line_items")
+}
+
+model AppSetting {
+  key       String   @id @db.Text
+  value     Json     @db.JsonB
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("app_settings")
 }
