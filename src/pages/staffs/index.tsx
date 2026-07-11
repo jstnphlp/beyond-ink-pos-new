@@ -79,7 +79,7 @@ function UserFormDialog({
 }: {
   mode: 'create' | 'edit'
   user?: PosUser
-  trigger: React.ReactNode
+  trigger: React.ReactElement
   isNonNativeTrigger?: boolean
 }) {
   const queryClient = useQueryClient()
