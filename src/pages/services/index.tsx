@@ -1,5 +1,14 @@
 import { useState } from 'react'
-import { Tags, Wrench, Package, Plus, Pencil, Trash2, AlertTriangle } from 'lucide-react'
+import {
+  Tags,
+  Wrench,
+  Package,
+  Plus,
+  Pencil,
+  Trash2,
+  AlertTriangle,
+  Search,
+} from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -25,6 +34,7 @@ import {
   useCreateMaterial,
   useUpdateMaterial,
   useDeleteMaterial,
+  useSetMaterialServices,
 } from '@/shared/hooks/use-catalog'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -70,7 +80,10 @@ const DEPT_LABELS: Record<string, string> = {
   design_dept: 'Design',
   dev_dept: 'Dev',
 }
-const DEPT_COLORS: Record<string, { border: string; bg: string; text: string; headerBg: string }> = {
+const DEPT_COLORS: Record<
+  string,
+  { border: string; bg: string; text: string; headerBg: string }
+> = {
   physical_dept: {
     border: 'border-blue-500/20',
     bg: 'bg-blue-500/5',
@@ -112,11 +125,12 @@ function DeleteDialog({
       <DialogPopup>
         <DialogTitle>Delete {label}</DialogTitle>
         <DialogDescription>
-          Are you sure you want to delete "{label}"? This action cannot be undone.
+          Are you sure you want to delete "{label}"? This action cannot be
+          undone.
         </DialogDescription>
-        <div className="mt-4 flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-3">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
-          <p className="text-sm text-muted-foreground">
+        <div className="border-destructive/30 bg-destructive/5 mt-4 flex items-start gap-3 rounded-lg border p-3">
+          <AlertTriangle className="text-destructive mt-0.5 h-4 w-4 shrink-0" />
+          <p className="text-muted-foreground text-sm">
             This will permanently remove this item from your catalog.
           </p>
         </div>
@@ -152,7 +166,9 @@ function CategoryFormDialog({
 }) {
   const [open, setOpen] = useState(false)
   const [name, setName] = useState(category?.name ?? '')
-  const [department, setDepartment] = useState(category?.department ?? 'physical_dept')
+  const [department, setDepartment] = useState(
+    category?.department ?? 'physical_dept'
+  )
   const [icon, setIcon] = useState(category?.icon ?? '')
 
   const createMutation = useCreateCategory()
@@ -166,8 +182,11 @@ function CategoryFormDialog({
 
     if (isEdit) {
       updateMutation.mutate(
-        { id: category.id, data: { name: name.trim(), department, icon: icon.trim() } },
-        { onSuccess: () => setOpen(false) },
+        {
+          id: category.id,
+          data: { name: name.trim(), department, icon: icon.trim() },
+        },
+        { onSuccess: () => setOpen(false) }
       )
     } else {
       createMutation.mutate(
@@ -179,7 +198,7 @@ function CategoryFormDialog({
             setIcon('')
             setOpen(false)
           },
-        },
+        }
       )
     }
   }
@@ -203,11 +222,15 @@ function CategoryFormDialog({
       <DialogPopup>
         <DialogTitle>{isEdit ? 'Edit Category' : 'Add Category'}</DialogTitle>
         <DialogDescription>
-          {isEdit ? 'Update the category details.' : 'Create a new service category.'}
+          {isEdit
+            ? 'Update the category details.'
+            : 'Create a new service category.'}
         </DialogDescription>
         <form onSubmit={handleSubmit} className="mt-4 space-y-4">
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-muted-foreground">Name</span>
+            <span className="text-muted-foreground text-xs font-medium">
+              Name
+            </span>
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -216,11 +239,13 @@ function CategoryFormDialog({
             />
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-muted-foreground">Department</span>
+            <span className="text-muted-foreground text-xs font-medium">
+              Department
+            </span>
             <select
               value={department}
               onChange={(e) => setDepartment(e.target.value)}
-              className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
+              className="border-input focus-visible:border-ring focus-visible:ring-ring/50 dark:bg-input/30 h-8 rounded-lg border bg-transparent px-2.5 text-sm outline-none focus-visible:ring-3"
             >
               <option value="physical_dept">Physical</option>
               <option value="design_dept">Design</option>
@@ -228,7 +253,9 @@ function CategoryFormDialog({
             </select>
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-muted-foreground">Icon (lucide name)</span>
+            <span className="text-muted-foreground text-xs font-medium">
+              Icon (lucide name)
+            </span>
             <Input
               value={icon}
               onChange={(e) => setIcon(e.target.value)}
@@ -239,7 +266,11 @@ function CategoryFormDialog({
             <DialogClose render={<Button variant="ghost" size="sm" />}>
               Cancel
             </DialogClose>
-            <Button size="sm" disabled={isPending || !name.trim()}>
+            <Button
+              type="submit"
+              size="sm"
+              disabled={isPending || !name.trim()}
+            >
               {isPending ? 'Saving...' : isEdit ? 'Update' : 'Create'}
             </Button>
           </div>
@@ -265,20 +296,22 @@ function DepartmentCategorySection({
         <h3 className={`text-sm font-bold ${colors.text}`}>
           {DEPT_LABELS[department] ?? department}
         </h3>
-        <p className="mt-0.5 text-xs text-muted-foreground">
+        <p className="text-muted-foreground mt-0.5 text-xs">
           {categories.length} categor{categories.length !== 1 ? 'ies' : 'y'}
         </p>
       </div>
       <CardContent className="p-0">
-        <div className="divide-y divide-border/20">
+        <div className="divide-border/20 divide-y">
           {categories.map((cat) => (
             <div key={cat.id} className="flex items-center gap-4 px-5 py-2.5">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+              <div className="bg-muted text-muted-foreground flex h-8 w-8 shrink-0 items-center justify-center rounded-lg">
                 <Tags className="h-4 w-4" />
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium">{cat.name}</p>
-                <p className="text-[11px] text-muted-foreground">{cat.icon || 'No icon'}</p>
+                <p className="text-muted-foreground text-[11px]">
+                  {cat.icon || 'No icon'}
+                </p>
               </div>
               <Badge
                 variant="outline"
@@ -337,8 +370,9 @@ function CategoriesPanel({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          {categories.length} categories across {grouped.length} department{grouped.length !== 1 ? 's' : ''}
+        <p className="text-muted-foreground text-sm">
+          {categories.length} categories across {grouped.length} department
+          {grouped.length !== 1 ? 's' : ''}
         </p>
         <CategoryFormDialog
           trigger={
@@ -351,7 +385,7 @@ function CategoriesPanel({
       </div>
 
       {grouped.length === 0 ? (
-        <p className="py-12 text-center text-sm text-muted-foreground">
+        <p className="text-muted-foreground py-12 text-center text-sm">
           No categories yet. Add your first category to get started.
         </p>
       ) : (
@@ -372,17 +406,20 @@ function CategoriesPanel({
 function ServiceFormDialog({
   service,
   categories,
-  trigger,
+  open,
+  onOpenChange,
 }: {
   service?: CatalogService
   categories: CatalogCategory[]
-  trigger: React.ReactElement
+  open: boolean
+  onOpenChange: (open: boolean) => void
 }) {
-  const [open, setOpen] = useState(false)
   const [name, setName] = useState(service?.name ?? '')
   const [categoryId, setCategoryId] = useState(service?.categoryId ?? '')
   const [description, setDescription] = useState(service?.description ?? '')
-  const [basePrice, setBasePrice] = useState(service?.basePrice?.toString() ?? '')
+  const [basePrice, setBasePrice] = useState(
+    service?.basePrice?.toString() ?? ''
+  )
   const [icon, setIcon] = useState(service?.icon ?? '')
 
   const createMutation = useCreateService()
@@ -408,7 +445,7 @@ function ServiceFormDialog({
             icon: icon.trim(),
           },
         },
-        { onSuccess: () => setOpen(false) },
+        { onSuccess: () => onOpenChange(false) }
       )
     } else {
       createMutation.mutate(
@@ -426,15 +463,15 @@ function ServiceFormDialog({
             setDescription('')
             setBasePrice('')
             setIcon('')
-            setOpen(false)
+            onOpenChange(false)
           },
-        },
+        }
       )
     }
   }
 
   function handleOpenChange(nextOpen: boolean) {
-    setOpen(nextOpen)
+    onOpenChange(nextOpen)
     if (nextOpen && service) {
       setName(service.name)
       setCategoryId(service.categoryId)
@@ -452,15 +489,18 @@ function ServiceFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger render={trigger} />
       <DialogPopup>
         <DialogTitle>{isEdit ? 'Edit Service' : 'Add Service'}</DialogTitle>
         <DialogDescription>
-          {isEdit ? 'Update the service details.' : 'Add a new service to your catalog.'}
+          {isEdit
+            ? 'Update the service details.'
+            : 'Add a new service to your catalog.'}
         </DialogDescription>
         <form onSubmit={handleSubmit} className="mt-4 space-y-4">
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-muted-foreground">Name</span>
+            <span className="text-muted-foreground text-xs font-medium">
+              Name
+            </span>
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -469,11 +509,13 @@ function ServiceFormDialog({
             />
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-muted-foreground">Category</span>
+            <span className="text-muted-foreground text-xs font-medium">
+              Category
+            </span>
             <select
               value={categoryId}
               onChange={(e) => setCategoryId(e.target.value)}
-              className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
+              className="border-input focus-visible:border-ring focus-visible:ring-ring/50 dark:bg-input/30 h-8 rounded-lg border bg-transparent px-2.5 text-sm outline-none focus-visible:ring-3"
               required
             >
               <option value="">Select a category</option>
@@ -485,7 +527,9 @@ function ServiceFormDialog({
             </select>
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-muted-foreground">Description</span>
+            <span className="text-muted-foreground text-xs font-medium">
+              Description
+            </span>
             <Input
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -493,7 +537,9 @@ function ServiceFormDialog({
             />
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-muted-foreground">Base Price (₱)</span>
+            <span className="text-muted-foreground text-xs font-medium">
+              Base Price (₱)
+            </span>
             <Input
               type="number"
               min="0"
@@ -505,7 +551,9 @@ function ServiceFormDialog({
             />
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-muted-foreground">Icon (lucide name)</span>
+            <span className="text-muted-foreground text-xs font-medium">
+              Icon (lucide name)
+            </span>
             <Input
               value={icon}
               onChange={(e) => setIcon(e.target.value)}
@@ -516,7 +564,11 @@ function ServiceFormDialog({
             <DialogClose render={<Button variant="ghost" size="sm" />}>
               Cancel
             </DialogClose>
-            <Button size="sm" disabled={isPending || !name.trim() || !categoryId}>
+            <Button
+              type="submit"
+              size="sm"
+              disabled={isPending || !name.trim() || !categoryId}
+            >
               {isPending ? 'Saving...' : isEdit ? 'Update' : 'Create'}
             </Button>
           </div>
@@ -536,6 +588,7 @@ function DepartmentServiceSection({
   services: CatalogService[]
 }) {
   const deleteMutation = useDeleteService()
+  const [editingId, setEditingId] = useState<string | null>(null)
   const colors = DEPT_COLORS[department] ?? DEPT_COLORS.physical_dept
 
   return (
@@ -544,8 +597,9 @@ function DepartmentServiceSection({
         <h3 className={`text-sm font-bold ${colors.text}`}>
           {DEPT_LABELS[department] ?? department}
         </h3>
-        <p className="mt-0.5 text-xs text-muted-foreground">
-          {services.length} service{services.length !== 1 ? 's' : ''} across {categories.length} categor{categories.length !== 1 ? 'ies' : 'y'}
+        <p className="text-muted-foreground mt-0.5 text-xs">
+          {services.length} service{services.length !== 1 ? 's' : ''} across{' '}
+          {categories.length} categor{categories.length !== 1 ? 'ies' : 'y'}
         </p>
       </div>
       <CardContent className="p-0">
@@ -553,37 +607,50 @@ function DepartmentServiceSection({
           const catServices = services.filter((s) => s.categoryId === cat.id)
           if (catServices.length === 0) return null
           return (
-            <div key={cat.id} className="border-b border-border/30 last:border-b-0">
-              <div className="flex items-center justify-between bg-muted/30 px-5 py-2">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            <div
+              key={cat.id}
+              className="border-border/30 border-b last:border-b-0"
+            >
+              <div className="bg-muted/30 flex items-center justify-between px-5 py-2">
+                <span className="text-muted-foreground text-xs font-semibold tracking-wider uppercase">
                   {cat.name}
                 </span>
-                <span className="text-[11px] text-muted-foreground">
-                  {catServices.length} service{catServices.length !== 1 ? 's' : ''}
+                <span className="text-muted-foreground text-[11px]">
+                  {catServices.length} service
+                  {catServices.length !== 1 ? 's' : ''}
                 </span>
               </div>
-              <div className="divide-y divide-border/20">
+              <div className="divide-border/20 divide-y">
                 {catServices.map((svc) => (
-                  <div key={svc.id} className="flex items-center gap-4 px-5 py-2.5">
+                  <div
+                    key={svc.id}
+                    className="flex items-center gap-4 px-5 py-2.5"
+                  >
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium truncate">{svc.name}</p>
+                      <p className="truncate text-sm font-medium">{svc.name}</p>
                       {svc.description && (
-                        <p className="text-[11px] text-muted-foreground truncate">{svc.description}</p>
+                        <p className="text-muted-foreground truncate text-[11px]">
+                          {svc.description}
+                        </p>
                       )}
                     </div>
-                    <span className="shrink-0 text-sm font-semibold tabular-nums text-muted-foreground">
+                    <span className="text-muted-foreground shrink-0 text-sm font-semibold tabular-nums">
                       {formatCurrency(svc.basePrice)}
                     </span>
                     <div className="flex shrink-0 items-center gap-1">
                       <ServiceFormDialog
                         service={svc}
                         categories={categories}
-                        trigger={
-                          <Button variant="ghost" size="icon-sm">
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                        }
+                        open={editingId === svc.id}
+                        onOpenChange={(o) => setEditingId(o ? svc.id : null)}
                       />
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        onClick={() => setEditingId(svc.id)}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
                       <DeleteDialog
                         label={svc.name}
                         onConfirm={() => deleteMutation.mutate(svc.id)}
@@ -610,6 +677,7 @@ function ServicesPanel({
   categories: CatalogCategory[]
   isLoading: boolean
 }) {
+  const [addOpen, setAddOpen] = useState(false)
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -632,22 +700,22 @@ function ServicesPanel({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
+        <p className="text-muted-foreground text-sm">
           {services.length} services across {categories.length} categories
         </p>
         <ServiceFormDialog
           categories={categories}
-          trigger={
-            <Button size="sm" className="gap-1.5">
-              <Plus className="h-3.5 w-3.5" />
-              Add Service
-            </Button>
-          }
+          open={addOpen}
+          onOpenChange={setAddOpen}
         />
+        <Button size="sm" className="gap-1.5" onClick={() => setAddOpen(true)}>
+          <Plus className="h-3.5 w-3.5" />
+          Add Service
+        </Button>
       </div>
 
       {grouped.length === 0 ? (
-        <p className="py-12 text-center text-sm text-muted-foreground">
+        <p className="text-muted-foreground py-12 text-center text-sm">
           No services yet. Add your first service to get started.
         </p>
       ) : (
@@ -668,20 +736,34 @@ function ServicesPanel({
 
 function MaterialFormDialog({
   material,
+  services,
+  serviceMaterialLinks,
   trigger,
 }: {
   material?: CatalogMaterial
+  services: CatalogService[]
+  serviceMaterialLinks: { serviceId: string; inventoryItemId: string }[]
   trigger: React.ReactElement
 }) {
   const [open, setOpen] = useState(false)
   const [name, setName] = useState(material?.name ?? '')
   const [unit, setUnit] = useState(material?.unit ?? '')
-  const [sellingPrice, setSellingPrice] = useState(material?.sellingPrice?.toString() ?? '')
-  const [stockOnHand, setStockOnHand] = useState(material?.stockOnHand?.toString() ?? '')
+  const [sellingPrice, setSellingPrice] = useState(
+    material?.sellingPrice?.toString() ?? ''
+  )
+  const [stockOnHand, setStockOnHand] = useState(
+    material?.stockOnHand?.toString() ?? ''
+  )
+  const [linkedServiceIds, setLinkedServiceIds] = useState<string[]>([])
+  const [serviceSearch, setServiceSearch] = useState('')
 
   const createMutation = useCreateMaterial()
   const updateMutation = useUpdateMaterial()
-  const isPending = createMutation.isPending || updateMutation.isPending
+  const linkMutation = useSetMaterialServices()
+  const isPending =
+    createMutation.isPending ||
+    updateMutation.isPending ||
+    linkMutation.isPending
   const isEdit = !!material
 
   function handleSubmit(e: React.FormEvent) {
@@ -690,6 +772,13 @@ function MaterialFormDialog({
 
     const price = parseFloat(sellingPrice) || 0
     const stock = parseInt(stockOnHand, 10) || 0
+
+    function afterSave(itemId: string) {
+      linkMutation.mutate(
+        { inventoryItemId: itemId, serviceIds: linkedServiceIds },
+        { onSuccess: () => setOpen(false) }
+      )
+    }
 
     if (isEdit) {
       updateMutation.mutate(
@@ -702,7 +791,7 @@ function MaterialFormDialog({
             stockOnHand: stock,
           },
         },
-        { onSuccess: () => setOpen(false) },
+        { onSuccess: () => afterSave(material.id) }
       )
     } else {
       createMutation.mutate(
@@ -713,31 +802,46 @@ function MaterialFormDialog({
           stockOnHand: stock,
         },
         {
-          onSuccess: () => {
+          onSuccess: (itemId) => {
             setName('')
             setUnit('')
             setSellingPrice('')
             setStockOnHand('')
-            setOpen(false)
+            setLinkedServiceIds([])
+            afterSave(itemId)
           },
-        },
+        }
       )
     }
   }
 
   function handleOpenChange(nextOpen: boolean) {
     setOpen(nextOpen)
-    if (nextOpen && material) {
-      setName(material.name)
-      setUnit(material.unit)
-      setSellingPrice(material.sellingPrice.toString())
-      setStockOnHand(material.stockOnHand.toString())
-    } else if (!nextOpen && !isEdit) {
-      setName('')
-      setUnit('')
-      setSellingPrice('')
-      setStockOnHand('')
+    if (nextOpen) {
+      if (material) {
+        setName(material.name)
+        setUnit(material.unit)
+        setSellingPrice(material.sellingPrice.toString())
+        setStockOnHand(material.stockOnHand.toString())
+        setLinkedServiceIds(
+          serviceMaterialLinks
+            .filter((l) => l.inventoryItemId === material.id)
+            .map((l) => l.serviceId)
+        )
+      } else {
+        setName('')
+        setUnit('')
+        setSellingPrice('')
+        setStockOnHand('')
+        setLinkedServiceIds([])
+      }
     }
+  }
+
+  function toggleService(id: string) {
+    setLinkedServiceIds((prev) =>
+      prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]
+    )
   }
 
   return (
@@ -746,11 +850,15 @@ function MaterialFormDialog({
       <DialogPopup>
         <DialogTitle>{isEdit ? 'Edit Material' : 'Add Material'}</DialogTitle>
         <DialogDescription>
-          {isEdit ? 'Update the material details.' : 'Add a new material or inventory item.'}
+          {isEdit
+            ? 'Update the material details and linked services.'
+            : 'Add a new material and link it to services.'}
         </DialogDescription>
         <form onSubmit={handleSubmit} className="mt-4 space-y-4">
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-muted-foreground">Name</span>
+            <span className="text-muted-foreground text-xs font-medium">
+              Name
+            </span>
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -759,7 +867,9 @@ function MaterialFormDialog({
             />
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-muted-foreground">Unit</span>
+            <span className="text-muted-foreground text-xs font-medium">
+              Unit
+            </span>
             <Input
               value={unit}
               onChange={(e) => setUnit(e.target.value)}
@@ -767,7 +877,9 @@ function MaterialFormDialog({
             />
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-muted-foreground">Selling Price (₱)</span>
+            <span className="text-muted-foreground text-xs font-medium">
+              Selling Price (₱)
+            </span>
             <Input
               type="number"
               min="0"
@@ -779,7 +891,9 @@ function MaterialFormDialog({
             />
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-muted-foreground">Stock on Hand</span>
+            <span className="text-muted-foreground text-xs font-medium">
+              Stock on Hand
+            </span>
             <Input
               type="number"
               min="0"
@@ -790,11 +904,61 @@ function MaterialFormDialog({
               required
             />
           </label>
+
+          {services.length > 0 && (
+            <div className="flex flex-col gap-1.5">
+              <span className="text-muted-foreground text-xs font-medium">
+                Link to Services
+              </span>
+              <div className="relative">
+                <Search className="text-muted-foreground absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2" />
+                <Input
+                  value={serviceSearch}
+                  onChange={(e) => setServiceSearch(e.target.value)}
+                  placeholder="Search services..."
+                  className="h-7 pl-8 text-xs"
+                />
+              </div>
+              <div className="border-border/50 divide-border/20 max-h-40 divide-y overflow-y-auto rounded-lg border">
+                {services
+                  .filter(
+                    (svc) =>
+                      !serviceSearch ||
+                      svc.name
+                        .toLowerCase()
+                        .includes(serviceSearch.toLowerCase())
+                  )
+                  .map((svc) => (
+                    <label
+                      key={svc.id}
+                      className="hover:bg-muted/30 flex cursor-pointer items-center gap-2.5 px-3 py-2"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={linkedServiceIds.includes(svc.id)}
+                        onChange={() => toggleService(svc.id)}
+                        className="accent-brand h-3.5 w-3.5"
+                      />
+                      <span className="text-sm">{svc.name}</span>
+                    </label>
+                  ))}
+              </div>
+              <span className="text-muted-foreground text-[11px]">
+                {linkedServiceIds.length} service
+                {linkedServiceIds.length !== 1 ? 's' : ''} linked
+              </span>
+            </div>
+          )}
+
           <div className="flex items-center justify-end gap-2 pt-2">
             <DialogClose render={<Button variant="ghost" size="sm" />}>
               Cancel
             </DialogClose>
-            <Button size="sm" disabled={isPending || !name.trim()}>
+            <Button
+              type="submit"
+              size="sm"
+              disabled={isPending || !name.trim()}
+            >
               {isPending ? 'Saving...' : isEdit ? 'Update' : 'Create'}
             </Button>
           </div>
@@ -806,9 +970,13 @@ function MaterialFormDialog({
 
 function MaterialsPanel({
   materials,
+  services,
+  serviceMaterialLinks,
   isLoading,
 }: {
   materials: CatalogMaterial[]
+  services: CatalogService[]
+  serviceMaterialLinks: { serviceId: string; inventoryItemId: string }[]
   isLoading: boolean
 }) {
   const deleteMutation = useDeleteMaterial()
@@ -828,10 +996,12 @@ function MaterialsPanel({
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-base">
-            <Package className="h-4 w-4 text-brand" />
+            <Package className="text-brand h-4 w-4" />
             Materials
           </CardTitle>
           <MaterialFormDialog
+            services={services}
+            serviceMaterialLinks={serviceMaterialLinks}
             trigger={
               <Button size="sm" className="gap-1.5">
                 <Plus className="h-3.5 w-3.5" />
@@ -843,29 +1013,35 @@ function MaterialsPanel({
       </CardHeader>
       <CardContent>
         {materials.length === 0 ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">
+          <p className="text-muted-foreground py-6 text-center text-sm">
             No materials yet. Add your first material or inventory item.
           </p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border/50 text-left text-xs text-muted-foreground">
-                  <th className="pb-2 pr-4 font-medium">Name</th>
-                  <th className="pb-2 pr-4 font-medium">Unit</th>
-                  <th className="pb-2 pr-4 font-medium">Selling Price</th>
-                  <th className="pb-2 pr-4 font-medium">Stock</th>
-                  <th className="pb-2 pr-4 font-medium">Status</th>
-                  <th className="pb-2 font-medium text-right">Actions</th>
+                <tr className="border-border/50 text-muted-foreground border-b text-left text-xs">
+                  <th className="pr-4 pb-2 font-medium">Name</th>
+                  <th className="pr-4 pb-2 font-medium">Unit</th>
+                  <th className="pr-4 pb-2 font-medium">Selling Price</th>
+                  <th className="pr-4 pb-2 font-medium">Stock</th>
+                  <th className="pr-4 pb-2 font-medium">Status</th>
+                  <th className="pb-2 text-right font-medium">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border/30">
+              <tbody className="divide-border/30 divide-y">
                 {materials.map((mat) => (
                   <tr key={mat.id}>
                     <td className="py-2.5 pr-4 font-medium">{mat.name}</td>
-                    <td className="py-2.5 pr-4 text-muted-foreground">{mat.unit || '—'}</td>
-                    <td className="py-2.5 pr-4 tabular-nums">{formatCurrency(mat.sellingPrice)}</td>
-                    <td className="py-2.5 pr-4 tabular-nums">{mat.stockOnHand}</td>
+                    <td className="text-muted-foreground py-2.5 pr-4">
+                      {mat.unit || '—'}
+                    </td>
+                    <td className="py-2.5 pr-4 tabular-nums">
+                      {formatCurrency(mat.sellingPrice)}
+                    </td>
+                    <td className="py-2.5 pr-4 tabular-nums">
+                      {mat.stockOnHand}
+                    </td>
                     <td className="py-2.5 pr-4">
                       <Badge
                         variant="outline"
@@ -882,6 +1058,8 @@ function MaterialsPanel({
                       <div className="flex items-center justify-end gap-1">
                         <MaterialFormDialog
                           material={mat}
+                          services={services}
+                          serviceMaterialLinks={serviceMaterialLinks}
                           trigger={
                             <Button variant="ghost" size="icon-sm">
                               <Pencil className="h-3.5 w-3.5" />
@@ -914,12 +1092,13 @@ export function ServicesPage() {
   const categories = data?.categories ?? []
   const services = data?.services ?? []
   const materials = data?.materials ?? []
+  const serviceMaterialLinks = data?.serviceMaterialLinks ?? []
 
   return (
     <div className="space-y-6 p-4 md:p-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Services</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="text-muted-foreground mt-1 text-sm">
           Manage your service catalog, categories, and inventory materials.
         </p>
       </div>
@@ -951,7 +1130,12 @@ export function ServicesPage() {
           />
         </TabsContent>
         <TabsContent value="materials" className="mt-4">
-          <MaterialsPanel materials={materials} isLoading={isLoading} />
+          <MaterialsPanel
+            materials={materials}
+            services={services}
+            serviceMaterialLinks={serviceMaterialLinks}
+            isLoading={isLoading}
+          />
         </TabsContent>
       </Tabs>
     </div>

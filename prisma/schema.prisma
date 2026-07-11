@@ -69,6 +69,7 @@ model InventoryItem {
   lowStockThreshold Decimal @default(0) @map("low_stock_threshold") @db.Decimal(10, 2)
   costPerUnit       Decimal @default(0) @map("cost_per_unit") @db.Decimal(10, 2)
   sellingPrice      Decimal @default(0) @map("selling_price") @db.Decimal(10, 2)
+  isActive          Boolean @default(true) @map("is_active")
   createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   inventoryMovements InventoryMovement[]

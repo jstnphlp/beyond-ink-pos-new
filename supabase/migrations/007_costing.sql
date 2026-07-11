@@ -2,6 +2,21 @@
 -- Run after 006_services_catalog.sql
 
 -- ═══════════════════════════════════════════════════════════════════════════════
+-- Add missing is_active column to inventory_items
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'inventory_items' AND column_name = 'is_active'
+  ) THEN
+    ALTER TABLE public.inventory_items ADD COLUMN is_active boolean NOT NULL DEFAULT true;
+  END IF;
+END
+$$;
+
+-- ═══════════════════════════════════════════════════════════════════════════════
 -- Tables
 -- ═══════════════════════════════════════════════════════════════════════════════
 

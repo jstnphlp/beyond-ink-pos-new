@@ -75,15 +75,19 @@ function UserFormDialog({
   mode,
   user,
   trigger,
-  isNonNativeTrigger,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
 }: {
   mode: 'create' | 'edit'
   user?: PosUser
-  trigger: React.ReactElement
-  isNonNativeTrigger?: boolean
+  trigger?: React.ReactElement
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }) {
   const queryClient = useQueryClient()
-  const [open, setOpen] = useState(false)
+  const [internalOpen, setInternalOpen] = useState(false)
+  const open = controlledOpen ?? internalOpen
+  const setOpen = controlledOnOpenChange ?? setInternalOpen
   const [form, setForm] = useState<UserFormData>(
     user
       ? {
@@ -92,7 +96,7 @@ function UserFormDialog({
           role: user.role,
           department: user.department ?? '',
         }
-      : EMPTY_FORM,
+      : EMPTY_FORM
   )
 
   const createMutation = useMutation({
@@ -101,7 +105,9 @@ function UserFormDialog({
         email: form.email,
         name: form.name || undefined,
         role: form.role,
-        department: form.department ? (form.department as PosUser['department']) : null,
+        department: form.department
+          ? (form.department as PosUser['department'])
+          : null,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pos-users'] })
@@ -111,7 +117,8 @@ function UserFormDialog({
     },
     onError: (err) => {
       toast.error('Failed to create user', {
-        description: err instanceof Error ? err.message : 'Something went wrong',
+        description:
+          err instanceof Error ? err.message : 'Something went wrong',
       })
     },
   })
@@ -121,7 +128,9 @@ function UserFormDialog({
       updatePosUser(user!.id, {
         name: form.name,
         role: form.role,
-        department: form.department ? (form.department as PosUser['department']) : null,
+        department: form.department
+          ? (form.department as PosUser['department'])
+          : null,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pos-users'] })
@@ -130,7 +139,8 @@ function UserFormDialog({
     },
     onError: (err) => {
       toast.error('Failed to update user', {
-        description: err instanceof Error ? err.message : 'Something went wrong',
+        description:
+          err instanceof Error ? err.message : 'Something went wrong',
       })
     },
   })
@@ -165,9 +175,11 @@ function UserFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger render={trigger} {...(isNonNativeTrigger ? { nativeButton: false } : {})} />
+      {trigger && <DialogTrigger render={trigger} />}
       <DialogPopup>
-        <DialogTitle>{mode === 'create' ? 'Add User' : 'Edit User'}</DialogTitle>
+        <DialogTitle>
+          {mode === 'create' ? 'Add User' : 'Edit User'}
+        </DialogTitle>
         <DialogDescription className="mt-1.5">
           {mode === 'create'
             ? 'Grant POS access to a new user by their Google email.'
@@ -176,20 +188,22 @@ function UserFormDialog({
 
         <div className="mt-4 space-y-3">
           <div>
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">
+            <label className="text-muted-foreground mb-1 block text-xs font-medium">
               Email (Google account)
             </label>
             <Input
               placeholder="user@gmail.com"
               type="email"
               value={form.email}
-              onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, email: e.target.value }))
+              }
               disabled={mode === 'edit'}
               autoFocus={mode === 'create'}
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">
+            <label className="text-muted-foreground mb-1 block text-xs font-medium">
               Display Name
             </label>
             <Input
@@ -200,7 +214,7 @@ function UserFormDialog({
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">
+            <label className="text-muted-foreground mb-1 block text-xs font-medium">
               Role
             </label>
             <select
@@ -212,7 +226,7 @@ function UserFormDialog({
                   department: e.target.value === 'owner' ? '' : f.department,
                 }))
               }
-              className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm transition-default focus:border-ring focus:ring-2 focus:ring-ring/30 focus:outline-none"
+              className="border-border bg-background transition-default focus:border-ring focus:ring-ring/30 h-10 w-full rounded-lg border px-3 text-sm focus:ring-2 focus:outline-none"
             >
               <option value="staff">Staff</option>
               <option value="owner">Owner</option>
@@ -220,13 +234,15 @@ function UserFormDialog({
           </div>
           {form.role === 'staff' && (
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">
+              <label className="text-muted-foreground mb-1 block text-xs font-medium">
                 Department
               </label>
               <select
                 value={form.department}
-                onChange={(e) => setForm((f) => ({ ...f, department: e.target.value }))}
-                className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm transition-default focus:border-ring focus:ring-2 focus:ring-ring/30 focus:outline-none"
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, department: e.target.value }))
+                }
+                className="border-border bg-background transition-default focus:border-ring focus:ring-ring/30 h-10 w-full rounded-lg border px-3 text-sm focus:ring-2 focus:outline-none"
               >
                 {DEPT_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -239,12 +255,14 @@ function UserFormDialog({
         </div>
 
         <div className="mt-5 flex justify-end gap-2">
-          <DialogClose
-            className="inline-flex items-center justify-center rounded-lg border border-input bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
-          >
+          <DialogClose className="border-input bg-background hover:bg-accent hover:text-accent-foreground inline-flex items-center justify-center rounded-lg border px-4 py-2 text-sm font-medium transition-colors">
             Cancel
           </DialogClose>
-          <Button onClick={handleSubmit} disabled={isPending} className="gap-1.5">
+          <Button
+            onClick={handleSubmit}
+            disabled={isPending}
+            className="gap-1.5"
+          >
             {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
             {mode === 'create' ? 'Add User' : 'Save Changes'}
           </Button>
@@ -273,7 +291,8 @@ function DeleteUserDialog({
     },
     onError: (err) => {
       toast.error('Failed to remove user', {
-        description: err instanceof Error ? err.message : 'Something went wrong',
+        description:
+          err instanceof Error ? err.message : 'Something went wrong',
       })
     },
   })
@@ -284,13 +303,11 @@ function DeleteUserDialog({
         <DialogTitle>Remove User</DialogTitle>
         <DialogDescription className="mt-1.5">
           Are you sure you want to remove{' '}
-          <span className="font-medium text-foreground">{user.email}</span>? They
-          will lose all POS access immediately.
+          <span className="text-foreground font-medium">{user.email}</span>?
+          They will lose all POS access immediately.
         </DialogDescription>
         <div className="mt-5 flex justify-end gap-2">
-          <DialogClose
-            className="inline-flex items-center justify-center rounded-lg border border-input bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
-          >
+          <DialogClose className="border-input bg-background hover:bg-accent hover:text-accent-foreground inline-flex items-center justify-center rounded-lg border px-4 py-2 text-sm font-medium transition-colors">
             Cancel
           </DialogClose>
           <Button
@@ -314,20 +331,21 @@ function DeleteUserDialog({
 
 const UserRow = memo(function UserRow({ user }: { user: PosUser }) {
   const [deleteOpen, setDeleteOpen] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
 
   return (
     <>
-      <div className="flex items-center justify-between py-3.5 transition-default hover:bg-muted/30 px-2 -mx-2 rounded-lg">
+      <div className="transition-default hover:bg-muted/30 -mx-2 flex items-center justify-between rounded-lg px-2 py-3.5">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <p className="text-sm font-semibold truncate">
+            <p className="truncate text-sm font-semibold">
               {user.name || user.email}
             </p>
             <Badge
               variant="outline"
               className={`text-[10px] capitalize ${
                 user.role === 'owner'
-                  ? 'bg-amber-500/10 text-amber-500 border-amber-500/30'
+                  ? 'border-amber-500/30 bg-amber-500/10 text-amber-500'
                   : ''
               }`}
             >
@@ -342,29 +360,25 @@ const UserRow = memo(function UserRow({ user }: { user: PosUser }) {
               </Badge>
             )}
           </div>
-          <p className="mt-0.5 text-xs text-muted-foreground truncate">
+          <p className="text-muted-foreground mt-0.5 truncate text-xs">
             {user.email}
           </p>
         </div>
 
         <DropdownMenu>
-          <DropdownMenuTrigger
-            className="inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-muted focus:outline-none"
-          >
-            <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+          <DropdownMenuTrigger className="hover:bg-muted inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors focus:outline-none">
+            <MoreHorizontal className="text-muted-foreground h-4 w-4" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" sideOffset={4}>
-            <UserFormDialog
-              mode="edit"
-              user={user}
-              isNonNativeTrigger
-              trigger={
-                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                  <Pencil className="h-4 w-4" />
-                  Edit User
-                </DropdownMenuItem>
-              }
-            />
+            <DropdownMenuItem
+              onSelect={(e) => {
+                e.preventDefault()
+                setEditOpen(true)
+              }}
+            >
+              <Pencil className="h-4 w-4" />
+              Edit User
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               variant="destructive"
@@ -380,7 +394,17 @@ const UserRow = memo(function UserRow({ user }: { user: PosUser }) {
         </DropdownMenu>
       </div>
 
-      <DeleteUserDialog user={user} open={deleteOpen} onOpenChange={setDeleteOpen} />
+      <UserFormDialog
+        mode="edit"
+        user={user}
+        open={editOpen}
+        onOpenChange={setEditOpen}
+      />
+      <DeleteUserDialog
+        user={user}
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+      />
     </>
   )
 })
@@ -391,15 +415,21 @@ export function StaffsPage() {
     queryFn: getPosUsers,
   })
 
-  const ownerCount = useMemo(() => (users ?? []).filter((u) => u.role === 'owner').length, [users])
-  const staffCount = useMemo(() => (users ?? []).filter((u) => u.role === 'staff').length, [users])
+  const ownerCount = useMemo(
+    () => (users ?? []).filter((u) => u.role === 'owner').length,
+    [users]
+  )
+  const staffCount = useMemo(
+    () => (users ?? []).filter((u) => u.role === 'staff').length,
+    [users]
+  )
 
   return (
     <div className="space-y-6 p-4 md:p-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Staffs</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="text-muted-foreground mt-1 text-sm">
             Manage POS user accounts and permissions.
           </p>
         </div>
@@ -418,22 +448,22 @@ export function StaffsPage() {
       <div className="grid gap-4 sm:grid-cols-3">
         <Card className="border-border/50">
           <CardContent className="p-5 text-center">
-            <p className="text-3xl font-bold text-foreground">
+            <p className="text-foreground text-3xl font-bold">
               {(users ?? []).length}
             </p>
-            <p className="mt-1 text-xs text-muted-foreground">Total Users</p>
+            <p className="text-muted-foreground mt-1 text-xs">Total Users</p>
           </CardContent>
         </Card>
         <Card className="border-border/50">
           <CardContent className="p-5 text-center">
             <p className="text-3xl font-bold text-amber-400">{ownerCount}</p>
-            <p className="mt-1 text-xs text-muted-foreground">Owners</p>
+            <p className="text-muted-foreground mt-1 text-xs">Owners</p>
           </CardContent>
         </Card>
         <Card className="border-border/50">
           <CardContent className="p-5 text-center">
             <p className="text-3xl font-bold text-blue-400">{staffCount}</p>
-            <p className="mt-1 text-xs text-muted-foreground">Staff</p>
+            <p className="text-muted-foreground mt-1 text-xs">Staff</p>
           </CardContent>
         </Card>
       </div>
@@ -442,7 +472,7 @@ export function StaffsPage() {
       <Card className="border-border/50">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <Shield className="h-4 w-4 text-brand" />
+            <Shield className="text-brand h-4 w-4" />
             All Users
             {users && users.length > 0 && (
               <Badge variant="secondary" className="ml-auto text-[10px]">
@@ -466,13 +496,13 @@ export function StaffsPage() {
             </div>
           ) : (users ?? []).length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
-              <Building2 className="h-10 w-10 text-muted-foreground/30" />
-              <p className="mt-3 text-sm font-medium text-muted-foreground/60">
+              <Building2 className="text-muted-foreground/30 h-10 w-10" />
+              <p className="text-muted-foreground/60 mt-3 text-sm font-medium">
                 No users found
               </p>
             </div>
           ) : (
-            <div className="space-y-0 divide-y divide-border/40">
+            <div className="divide-border/40 space-y-0 divide-y">
               {(users ?? []).map((user) => (
                 <UserRow key={user.id} user={user} />
               ))}

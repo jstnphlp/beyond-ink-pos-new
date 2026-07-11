@@ -63,6 +63,7 @@ export async function getCatalog(): Promise<CatalogData> {
     supabase
       .from('inventory_items')
       .select('id, name, unit, selling_price, stock_on_hand')
+      .eq('is_active', true)
       .order('name'),
     supabase
       .from('service_material_prices')
@@ -101,7 +102,14 @@ export async function createService(data: {
 
 export async function updateService(
   id: string,
-  data: Partial<{ name: string; categoryId: string; description: string; basePrice: number; icon: string; isActive: boolean }>,
+  data: Partial<{
+    name: string
+    categoryId: string
+    description: string
+    basePrice: number
+    icon: string
+    isActive: boolean
+  }>
 ) {
   const update: Record<string, unknown> = {}
   if (data.name !== undefined) update.name = data.name
@@ -115,11 +123,18 @@ export async function updateService(
 }
 
 export async function deleteService(id: string) {
-  const { error } = await supabase.from('services').update({ is_active: false }).eq('id', id)
+  const { error } = await supabase
+    .from('services')
+    .update({ is_active: false })
+    .eq('id', id)
   if (error) throw error
 }
 
-export async function createCategory(data: { name: string; department: string; icon: string }) {
+export async function createCategory(data: {
+  name: string
+  department: string
+  icon: string
+}) {
   const { error } = await supabase.from('service_categories').insert({
     name: data.name,
     department: data.department,
@@ -130,35 +145,62 @@ export async function createCategory(data: { name: string; department: string; i
 
 export async function updateCategory(
   id: string,
-  data: Partial<{ name: string; department: string; icon: string; isActive: boolean }>,
+  data: Partial<{
+    name: string
+    department: string
+    icon: string
+    isActive: boolean
+  }>
 ) {
   const update: Record<string, unknown> = {}
   if (data.name !== undefined) update.name = data.name
   if (data.department !== undefined) update.department = data.department
   if (data.icon !== undefined) update.icon = data.icon
   if (data.isActive !== undefined) update.is_active = data.isActive
-  const { error } = await supabase.from('service_categories').update(update).eq('id', id)
+  const { error } = await supabase
+    .from('service_categories')
+    .update(update)
+    .eq('id', id)
   if (error) throw error
 }
 
 export async function deleteCategory(id: string) {
-  const { error } = await supabase.from('service_categories').update({ is_active: false }).eq('id', id)
+  const { error } = await supabase
+    .from('service_categories')
+    .update({ is_active: false })
+    .eq('id', id)
   if (error) throw error
 }
 
-export async function createMaterial(data: { name: string; unit: string; sellingPrice: number; stockOnHand: number }) {
-  const { error } = await supabase.from('inventory_items').insert({
-    name: data.name,
-    unit: data.unit,
-    selling_price: data.sellingPrice,
-    stock_on_hand: data.stockOnHand,
-  })
+export async function createMaterial(data: {
+  name: string
+  unit: string
+  sellingPrice: number
+  stockOnHand: number
+}): Promise<string> {
+  const { data: row, error } = await supabase
+    .from('inventory_items')
+    .insert({
+      name: data.name,
+      unit: data.unit,
+      selling_price: data.sellingPrice,
+      stock_on_hand: data.stockOnHand,
+    })
+    .select('id')
+    .single()
   if (error) throw error
+  return row.id as string
 }
 
 export async function updateMaterial(
   id: string,
-  data: Partial<{ name: string; unit: string; sellingPrice: number; stockOnHand: number; isActive: boolean }>,
+  data: Partial<{
+    name: string
+    unit: string
+    sellingPrice: number
+    stockOnHand: number
+    isActive: boolean
+  }>
 ) {
   const update: Record<string, unknown> = {}
   if (data.name !== undefined) update.name = data.name
@@ -166,18 +208,24 @@ export async function updateMaterial(
   if (data.sellingPrice !== undefined) update.selling_price = data.sellingPrice
   if (data.stockOnHand !== undefined) update.stock_on_hand = data.stockOnHand
   if (data.isActive !== undefined) update.is_active = data.isActive
-  const { error } = await supabase.from('inventory_items').update(update).eq('id', id)
+  const { error } = await supabase
+    .from('inventory_items')
+    .update(update)
+    .eq('id', id)
   if (error) throw error
 }
 
 export async function deleteMaterial(id: string) {
-  const { error } = await supabase.from('inventory_items').update({ is_active: false }).eq('id', id)
+  const { error } = await supabase
+    .from('inventory_items')
+    .update({ is_active: false })
+    .eq('id', id)
   if (error) throw error
 }
 
 export async function setServiceMaterials(
   serviceId: string,
-  materials: { inventoryItemId: string; suggestedUnitPrice: number }[],
+  materials: { inventoryItemId: string; suggestedUnitPrice: number }[]
 ) {
   const { error: delError } = await supabase
     .from('service_material_prices')
@@ -191,7 +239,32 @@ export async function setServiceMaterials(
       inventory_item_id: m.inventoryItemId,
       suggested_unit_price: m.suggestedUnitPrice,
     }))
-    const { error: insError } = await supabase.from('service_material_prices').insert(rows)
+    const { error: insError } = await supabase
+      .from('service_material_prices')
+      .insert(rows)
+    if (insError) throw insError
+  }
+}
+
+export async function setMaterialServices(
+  inventoryItemId: string,
+  serviceIds: string[]
+) {
+  const { error: delError } = await supabase
+    .from('service_material_prices')
+    .delete()
+    .eq('inventory_item_id', inventoryItemId)
+  if (delError) throw delError
+
+  if (serviceIds.length > 0) {
+    const rows = serviceIds.map((sid) => ({
+      service_id: sid,
+      inventory_item_id: inventoryItemId,
+      suggested_unit_price: 0,
+    }))
+    const { error: insError } = await supabase
+      .from('service_material_prices')
+      .insert(rows)
     if (insError) throw insError
   }
 }
