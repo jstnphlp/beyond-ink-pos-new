@@ -38,14 +38,23 @@ enum UserRole {
   @@map("user_role")
 }
 
+enum UserDepartment {
+  physical_dept
+  design_dept
+  dev_dept
+
+  @@map("user_department")
+}
+
 // ─── Auth / Access ────────────────────────────────────────────────────────────
 
 model AllowedUser {
-  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email     String    @unique @db.Text
-  name      String?   @db.Text
-  role      UserRole  @default(staff)
-  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  id         String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email      String           @unique @db.Text
+  name       String?          @db.Text
+  role       UserRole         @default(staff)
+  department UserDepartment?
+  createdAt  DateTime         @default(now()) @map("created_at") @db.Timestamptz
 
   @@map("allowed_users")
 }
