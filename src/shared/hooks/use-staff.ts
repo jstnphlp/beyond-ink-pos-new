@@ -12,26 +12,26 @@ import type { StaffSession, AttendanceFilters } from '@/shared/api/staff.types'
 
 export const staffKeys = {
   all: ['staff'] as const,
-  members: () => [...staffKeys.all, 'members'] as const,
-  activeSessions: () => [...staffKeys.all, 'active-sessions'] as const,
+  members: (department?: string) => [...staffKeys.all, 'members', department] as const,
+  activeSessions: (department?: string) => [...staffKeys.all, 'active-sessions', department] as const,
   attendance: (filters: AttendanceFilters) =>
     [...staffKeys.all, 'attendance', filters] as const,
 }
 
-export function useStaffMembers() {
+export function useStaffMembers(department?: string) {
   return useQuery({
-    queryKey: staffKeys.members(),
-    queryFn: getStaffMembers,
+    queryKey: staffKeys.members(department),
+    queryFn: () => getStaffMembers(department),
     staleTime: 30 * 60_000,
     gcTime: 60 * 60_000,
     placeholderData: keepPreviousData,
   })
 }
 
-export function useActiveSessions() {
+export function useActiveSessions(department?: string) {
   return useQuery({
-    queryKey: staffKeys.activeSessions(),
-    queryFn: getActiveSessions,
+    queryKey: staffKeys.activeSessions(department),
+    queryFn: () => getActiveSessions(department),
     staleTime: 2 * 60_000,
     gcTime: 30 * 60_000,
     placeholderData: keepPreviousData,
@@ -63,26 +63,29 @@ export function useClockIn() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ staffMemberId, staffName }: { staffMemberId: string; staffName: string }) =>
-      apiClockIn(staffMemberId, staffName),
+    mutationFn: (params: { staffMemberId?: string; staffName: string; department: string }) =>
+      apiClockIn(params),
 
-    onMutate: async ({ staffMemberId, staffName }) => {
+    onMutate: async (params) => {
       await queryClient.cancelQueries({ queryKey: staffKeys.activeSessions() })
 
       const previous = queryClient.getQueryData<StaffSession[]>(staffKeys.activeSessions())
 
       queryClient.setQueryData<StaffSession[]>(staffKeys.activeSessions(), (old) => {
         if (!old) return old
-        if (old.some((s) => s.staffMemberId === staffMemberId)) return old
+        const key = params.staffMemberId ?? params.staffName
+        if (old.some((s) => (s.staffMemberId ?? s.staffName) === key)) return old
         return [
           ...old,
           {
-            id: `optimistic-${staffMemberId}`,
-            staffMemberId,
-            staffName,
+            id: `optimistic-${key}`,
+            staffMemberId: params.staffMemberId ?? null,
+            staffName: params.staffName,
+            department: params.department,
             timeIn: new Date().toISOString(),
             timeOut: null,
             autoLoggedOut: false,
+            note: null,
             createdAt: new Date().toISOString(),
           },
         ]
@@ -108,16 +111,18 @@ export function useClockOut() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (staffMemberId: string) => apiClockOut(staffMemberId),
+    mutationFn: (params: { staffMemberId: string | null; staffName: string; note?: string }) =>
+      apiClockOut(params.staffMemberId, params.staffName, params.note),
 
-    onMutate: async (staffMemberId) => {
+    onMutate: async (params) => {
       await queryClient.cancelQueries({ queryKey: staffKeys.activeSessions() })
 
       const previous = queryClient.getQueryData<StaffSession[]>(staffKeys.activeSessions())
 
       queryClient.setQueryData<StaffSession[]>(staffKeys.activeSessions(), (old) => {
         if (!old) return old
-        return old.filter((s) => s.staffMemberId !== staffMemberId)
+        const key = params.staffMemberId ?? params.staffName
+        return old.filter((s) => (s.staffMemberId ?? s.staffName) !== key)
       })
 
       return { previous }

@@ -246,17 +246,20 @@ model StaffMember {
 
 model StaffSession {
   id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  staffMemberId  String    @map("staff_member_id") @db.Uuid
+  staffMemberId  String?   @map("staff_member_id") @db.Uuid
   staffName      String    @map("staff_name") @db.Text
+  department     String    @default("physical_dept") @db.Text
   timeIn         DateTime  @default(now()) @map("time_in") @db.Timestamptz
   timeOut        DateTime? @map("time_out") @db.Timestamptz
   autoLoggedOut  Boolean   @default(false) @map("auto_logged_out")
+  note           String?   @db.Text
   createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
 
-  staffMember StaffMember @relation(fields: [staffMemberId], references: [id])
+  staffMember StaffMember? @relation(fields: [staffMemberId], references: [id])
 
   @@index([staffMemberId, timeIn])
   @@index([timeOut, timeIn])
+  @@index([department])
   @@map("staff_sessions")
 }
 

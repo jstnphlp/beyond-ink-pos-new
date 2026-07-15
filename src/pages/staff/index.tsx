@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Users, LogIn, LogOut, History, Timer } from 'lucide-react'
+import { Users, LogIn, LogOut, History, Timer, UserCircle } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -20,7 +20,26 @@ import {
   useClockIn,
   useClockOut,
 } from '@/shared/hooks/use-staff'
+import { useAuth } from '@/shared/hooks/use-auth'
 import { useStaffStore } from '@/stores/staff-store'
+
+const DEPT_OPTIONS = [
+  { value: 'physical_dept', label: 'Physical' },
+  { value: 'design_dept', label: 'Design' },
+  { value: 'dev_dept', label: 'Development' },
+]
+
+const DEPT_LABELS: Record<string, string> = {
+  physical_dept: 'Physical',
+  design_dept: 'Design',
+  dev_dept: 'Development',
+}
+
+const DEPT_BADGE_COLORS: Record<string, string> = {
+  physical_dept: 'bg-blue-500/10 text-blue-500 border-blue-500/30',
+  design_dept: 'bg-purple-500/10 text-purple-500 border-purple-500/30',
+  dev_dept: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30',
+}
 
 function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString('en-US', {
@@ -64,15 +83,36 @@ function getDefaultDateTo(): string {
 
 // ─── Clock-In Dialog ─────────────────────────────────────────────────────────
 
-function ClockInDialog() {
-  const { data: members } = useStaffMembers()
+function ClockInDialog({
+  role,
+  userDepartment,
+  displayName,
+}: {
+  role: 'owner' | 'staff'
+  userDepartment: string | null
+  displayName: string | null
+}) {
+  const isOwner = role === 'owner'
+  const [ownerDept, setOwnerDept] = useState<string>('physical_dept')
+  const effectiveDept = isOwner ? ownerDept : userDepartment ?? undefined
+
+  const { data: members } = useStaffMembers(effectiveDept)
   const { data: activeSessions } = useActiveSessions()
   const clockInMutation = useClockIn()
   const [open, setOpen] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [clockInSelf, setClockInSelf] = useState(false)
 
-  const activeIds = new Set((activeSessions ?? []).map((s) => s.staffMemberId))
+  const activeIds = new Set(
+    (activeSessions ?? [])
+      .filter((s) => s.staffMemberId)
+      .map((s) => s.staffMemberId!)
+  )
   const available = (members ?? []).filter((m) => !activeIds.has(m.id))
+
+  const isOwnerAlreadyClockedIn = (activeSessions ?? []).some(
+    (s) => !s.staffMemberId && s.staffName === displayName
+  )
 
   function toggleMember(id: string) {
     setSelectedIds((prev) => {
@@ -87,48 +127,126 @@ function ClockInDialog() {
   }
 
   function handleClockInSelected() {
-    const toClockIn = available.filter((m) => selectedIds.has(m.id))
+    const total = selectedIds.size + (clockInSelf ? 1 : 0)
     let completed = 0
-    for (const member of toClockIn) {
+
+    function onDone() {
+      completed++
+      if (completed === total) {
+        setSelectedIds(new Set())
+        setClockInSelf(false)
+        setOpen(false)
+      }
+    }
+
+    for (const id of selectedIds) {
+      const member = available.find((m) => m.id === id)
+      if (!member) continue
       clockInMutation.mutate(
-        { staffMemberId: member.id, staffName: member.name },
-        {
-          onSettled: () => {
-            completed++
-            if (completed === toClockIn.length) {
-              setSelectedIds(new Set())
-              setOpen(false)
-            }
-          },
-        },
+        { staffMemberId: member.id, staffName: member.name, department: effectiveDept! },
+        { onSettled: onDone },
+      )
+    }
+
+    if (clockInSelf && displayName) {
+      clockInMutation.mutate(
+        { staffName: displayName, department: effectiveDept! },
+        { onSettled: onDone },
       )
     }
   }
 
-  // Reset selection when dialog opens/closes
   function handleOpenChange(nextOpen: boolean) {
     setOpen(nextOpen)
     if (!nextOpen) {
       setSelectedIds(new Set())
+      setClockInSelf(false)
     }
   }
 
+  const hasSelection = selectedIds.size > 0 || clockInSelf
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger
-        render={<Button size="sm" className="gap-1.5" />}
-      >
+      <DialogTrigger render={<Button size="sm" className="gap-1.5" />}>
         <LogIn className="h-3.5 w-3.5" />
         Time In
       </DialogTrigger>
       <DialogPopup>
         <DialogTitle>Clock In</DialogTitle>
         <DialogDescription>
-          Select staff members to start their shift.
+          {isOwner
+            ? 'Pick a department, then select who to clock in.'
+            : 'Select staff members to start their shift.'}
         </DialogDescription>
 
+        {isOwner && (
+          <div className="mt-4 flex gap-1.5">
+            {DEPT_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => {
+                  setOwnerDept(opt.value)
+                  setSelectedIds(new Set())
+                  setClockInSelf(false)
+                }}
+                className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+                  ownerDept === opt.value
+                    ? `${DEPT_BADGE_COLORS[opt.value]} border-current`
+                    : 'border-border text-muted-foreground hover:bg-muted/50'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        )}
+
         <div className="mt-4 space-y-2">
-          {available.length === 0 && (
+          {/* Owner self clock-in */}
+          {isOwner && displayName && !isOwnerAlreadyClockedIn && (
+            <button
+              type="button"
+              className={`flex w-full items-center gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-muted/50 disabled:opacity-50 ${
+                clockInSelf
+                  ? 'border-emerald-500/60 bg-emerald-500/10'
+                  : 'border-dashed border-muted-foreground/30'
+              }`}
+              disabled={clockInMutation.isPending}
+              onClick={() => setClockInSelf((v) => !v)}
+            >
+              <div
+                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors ${
+                  clockInSelf
+                    ? 'border-emerald-500 bg-emerald-500 text-white'
+                    : 'border-muted-foreground/40 bg-transparent'
+                }`}
+              >
+                {clockInSelf && (
+                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+              </div>
+              <div className="flex h-8 w-8 items-center justify-center rounded-full border border-amber-500/30 bg-amber-500/10">
+                <UserCircle className="h-4 w-4 text-amber-500" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium">{displayName}</p>
+                <p className="text-xs text-muted-foreground">Clock in yourself</p>
+              </div>
+            </button>
+          )}
+
+          {isOwner && displayName && isOwnerAlreadyClockedIn && (
+            <p className="py-2 text-center text-xs text-muted-foreground">
+              You are already clocked in.
+            </p>
+          )}
+
+          {/* Staff members */}
+          {available.length === 0 && !isOwner && (
             <p className="py-4 text-center text-sm text-muted-foreground">
               Everyone is already clocked in.
             </p>
@@ -155,18 +273,8 @@ function ClockInDialog() {
                   }`}
                 >
                   {isSelected && (
-                    <svg
-                      className="h-3 w-3"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth={3}
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M5 13l4 4L19 7"
-                      />
+                    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                     </svg>
                   )}
                 </div>
@@ -187,15 +295,17 @@ function ClockInDialog() {
           <DialogClose render={<Button variant="ghost" size="sm" />}>
             Cancel
           </DialogClose>
-          {available.length > 0 && (
+          {(available.length > 0 || (isOwner && displayName && !isOwnerAlreadyClockedIn)) && (
             <Button
               size="sm"
               className="gap-1.5"
-              disabled={selectedIds.size === 0 || clockInMutation.isPending}
+              disabled={!hasSelection || clockInMutation.isPending}
               onClick={handleClockInSelected}
             >
               <LogIn className="h-3.5 w-3.5" />
-              Clock In {selectedIds.size > 0 ? `(${selectedIds.size})` : ''}
+              Clock In {selectedIds.size + (clockInSelf ? 1 : 0) > 0
+                ? `(${selectedIds.size + (clockInSelf ? 1 : 0)})`
+                : ''}
             </Button>
           )}
         </div>
@@ -204,11 +314,100 @@ function ClockInDialog() {
   )
 }
 
+// ─── Owner Clock-Out Dialog ─────────────────────────────────────────────────
+
+function OwnerClockOutDialog({
+  session,
+  open,
+  onOpenChange,
+}: {
+  session: { staffMemberId: string | null; staffName: string }
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}) {
+  const clockOutMutation = useClockOut()
+  const [note, setNote] = useState('')
+
+  function handleSubmit() {
+    if (!note.trim()) return
+    clockOutMutation.mutate(
+      {
+        staffMemberId: session.staffMemberId,
+        staffName: session.staffName,
+        note: note.trim(),
+      },
+      {
+        onSettled: () => {
+          setNote('')
+          onOpenChange(false)
+        },
+      },
+    )
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={() => {}}>
+      <DialogPopup>
+        <DialogTitle>Before you go!</DialogTitle>
+        <DialogDescription className="mt-1.5">
+          What great thing did you accomplish today?
+        </DialogDescription>
+
+        <textarea
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="Share something you're proud of..."
+          autoFocus
+          rows={4}
+          className="mt-4 w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm placeholder:text-muted-foreground focus:border-ring focus:ring-2 focus:ring-ring/30 focus:outline-none resize-none"
+        />
+
+        <div className="mt-4 flex justify-end">
+          <Button
+            size="sm"
+            className="gap-1.5"
+            disabled={!note.trim() || clockOutMutation.isPending}
+            onClick={handleSubmit}
+          >
+            <LogOut className="h-3.5 w-3.5" />
+            {clockOutMutation.isPending ? 'Clocking out...' : 'Clock Out'}
+          </Button>
+        </div>
+      </DialogPopup>
+    </Dialog>
+  )
+}
+
 // ─── Active Sessions Panel ───────────────────────────────────────────────────
 
-function ActiveSessionsPanel() {
-  const { data: sessions, isLoading } = useActiveSessions()
+function ActiveSessionsPanel({
+  role,
+  userDepartment,
+  displayName,
+}: {
+  role: 'owner' | 'staff'
+  userDepartment: string | null
+  displayName: string | null
+}) {
+  const isOwner = role === 'owner'
+  const dept = isOwner ? undefined : userDepartment ?? undefined
+  const { data: sessions, isLoading } = useActiveSessions(dept)
   const clockOutMutation = useClockOut()
+  const [ownerClockOutSession, setOwnerClockOutSession] = useState<{
+    staffMemberId: string | null
+    staffName: string
+  } | null>(null)
+
+  function handleClockOut(session: { staffMemberId: string | null; staffName: string }) {
+    if (!session.staffMemberId) {
+      setOwnerClockOutSession(session)
+    } else {
+      clockOutMutation.mutate({
+        staffMemberId: session.staffMemberId,
+        staffName: session.staffName,
+      })
+    }
+  }
 
   return (
     <Card className="border-border/50">
@@ -218,7 +417,7 @@ function ActiveSessionsPanel() {
             <Users className="h-4 w-4 text-brand" />
             Active Sessions
           </CardTitle>
-          <ClockInDialog />
+          <ClockInDialog role={role} userDepartment={userDepartment} displayName={displayName} />
         </div>
       </CardHeader>
       <CardContent>
@@ -249,7 +448,25 @@ function ActiveSessionsPanel() {
                   <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-background bg-emerald-500" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium">{session.staffName}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium">{session.staffName}</p>
+                    {isOwner && (
+                      <Badge
+                        variant="outline"
+                        className={`text-[10px] ${DEPT_BADGE_COLORS[session.department] ?? ''}`}
+                      >
+                        {DEPT_LABELS[session.department] ?? session.department}
+                      </Badge>
+                    )}
+                    {!session.staffMemberId && (
+                      <Badge
+                        variant="outline"
+                        className="border-amber-500/30 bg-amber-500/10 text-[10px] text-amber-500"
+                      >
+                        owner
+                      </Badge>
+                    )}
+                  </div>
                   <p className="text-xs text-muted-foreground">
                     on shift since {formatTime(session.timeIn)}
                   </p>
@@ -260,7 +477,7 @@ function ActiveSessionsPanel() {
                 size="sm"
                 className="gap-1"
                 disabled={clockOutMutation.isPending}
-                onClick={() => clockOutMutation.mutate(session.staffMemberId)}
+                onClick={() => handleClockOut(session)}
               >
                 <LogOut className="h-3 w-3" />
                 Time Out
@@ -269,18 +486,36 @@ function ActiveSessionsPanel() {
           ))}
         </div>
       </CardContent>
+
+      {ownerClockOutSession && (
+        <OwnerClockOutDialog
+          session={ownerClockOutSession}
+          open={!!ownerClockOutSession}
+          onOpenChange={(open) => {
+            if (!open) setOwnerClockOutSession(null)
+          }}
+        />
+      )}
     </Card>
   )
 }
 
 // ─── Attendance Log ──────────────────────────────────────────────────────────
 
-function AttendanceLog() {
+function AttendanceLog({
+  role,
+  userDepartment,
+}: {
+  role: 'owner' | 'staff'
+  userDepartment: string | null
+}) {
+  const isOwner = role === 'owner'
   const { attendanceFilters, setAttendanceFilters } = useStaffStore()
-  const { data: members } = useStaffMembers()
+  const { data: members } = useStaffMembers(isOwner ? undefined : userDepartment ?? undefined)
   const [dateFrom, setDateFrom] = useState(getDefaultDateFrom)
   const [dateTo, setDateTo] = useState(getDefaultDateTo)
   const [staffFilter, setStaffFilter] = useState<string>('all')
+  const [deptFilter, setDeptFilter] = useState<string>(isOwner ? 'all' : userDepartment ?? 'all')
   const [appliedFilters, setAppliedFilters] = useState(attendanceFilters)
 
   const { data, isLoading, isFetching, fetchNextPage, hasNextPage, isFetchingNextPage } =
@@ -289,6 +524,7 @@ function AttendanceLog() {
   function handleFilter() {
     const filters = {
       staffMemberId: staffFilter,
+      department: isOwner ? deptFilter : (userDepartment ?? 'all'),
       dateFrom: dateFrom ? `${dateFrom}T00:00:00.000Z` : null,
       dateTo: dateTo || null,
     }
@@ -298,7 +534,6 @@ function AttendanceLog() {
 
   const sessions = data?.pages.flatMap((page) => page.sessions) ?? []
 
-  // Summary hours
   const hoursByName: Record<string, number> = {}
   for (const s of sessions) {
     if (s.timeOut) {
@@ -336,6 +571,23 @@ function AttendanceLog() {
               className="h-8 rounded-lg border border-border bg-background px-2.5 text-sm"
             />
           </label>
+          {isOwner && (
+            <label className="flex flex-col gap-1">
+              <span className="text-xs text-muted-foreground">Department</span>
+              <select
+                value={deptFilter}
+                onChange={(e) => setDeptFilter(e.target.value)}
+                className="h-8 rounded-lg border border-border bg-background px-2.5 text-sm"
+              >
+                <option value="all">All Departments</option>
+                {DEPT_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <label className="flex flex-col gap-1">
             <span className="text-xs text-muted-foreground">Staff</span>
             <select
@@ -393,6 +645,7 @@ function AttendanceLog() {
                 <tr className="border-b border-border/50 text-left text-xs text-muted-foreground">
                   <th className="pb-2 pr-4 font-medium">Date</th>
                   <th className="pb-2 pr-4 font-medium">Staff</th>
+                  {isOwner && <th className="pb-2 pr-4 font-medium">Dept</th>}
                   <th className="pb-2 pr-4 font-medium">Time In</th>
                   <th className="pb-2 pr-4 font-medium">Time Out</th>
                   <th className="pb-2 font-medium">Hours</th>
@@ -409,7 +662,27 @@ function AttendanceLog() {
                       <td className="py-2.5 pr-4 text-muted-foreground">
                         {formatDate(s.timeIn)}
                       </td>
-                      <td className="py-2.5 pr-4 font-medium">{s.staffName}</td>
+                      <td className="py-2.5 pr-4 font-medium">
+                        {s.staffName}
+                        {!s.staffMemberId && (
+                          <Badge
+                            variant="outline"
+                            className="ml-1.5 border-amber-500/30 bg-amber-500/10 text-[10px] text-amber-500"
+                          >
+                            owner
+                          </Badge>
+                        )}
+                      </td>
+                      {isOwner && (
+                        <td className="py-2.5 pr-4">
+                          <Badge
+                            variant="outline"
+                            className={`text-[10px] ${DEPT_BADGE_COLORS[s.department] ?? ''}`}
+                          >
+                            {DEPT_LABELS[s.department] ?? s.department}
+                          </Badge>
+                        </td>
+                      )}
                       <td className="py-2.5 pr-4">{formatTime(s.timeIn)}</td>
                       <td className="py-2.5 pr-4">
                         {s.timeOut ? formatTime(s.timeOut) : '—'}
@@ -458,8 +731,16 @@ function AttendanceLog() {
 
 // ─── Summary Cards ───────────────────────────────────────────────────────────
 
-function SummaryCards() {
-  const { data: sessions, isLoading } = useActiveSessions()
+function SummaryCards({
+  role,
+  userDepartment,
+}: {
+  role: 'owner' | 'staff'
+  userDepartment: string | null
+}) {
+  const isOwner = role === 'owner'
+  const dept = isOwner ? undefined : userDepartment ?? undefined
+  const { data: sessions, isLoading } = useActiveSessions(dept)
 
   if (isLoading) {
     return (
@@ -515,18 +796,22 @@ function SummaryCards() {
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export function StaffPage() {
+  const { role, department, displayName } = useAuth()
+
   return (
     <div className="space-y-6 p-4 md:p-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Staff Shifts</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Monitor who's clocked in and manage shifts.
+          {role === 'owner'
+            ? 'Monitor who\'s clocked in across all departments and manage shifts.'
+            : `Monitor who's clocked in and manage shifts — ${DEPT_LABELS[department ?? ''] ?? 'your department'}.`}
         </p>
       </div>
 
-      <SummaryCards />
-      <ActiveSessionsPanel />
-      <AttendanceLog />
+      <SummaryCards role={role!} userDepartment={department} />
+      <ActiveSessionsPanel role={role!} userDepartment={department} displayName={displayName} />
+      <AttendanceLog role={role!} userDepartment={department} />
     </div>
   )
 }

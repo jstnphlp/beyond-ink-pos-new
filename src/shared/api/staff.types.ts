@@ -8,16 +8,19 @@ export interface StaffMember {
 
 export interface StaffSession {
   id: string
-  staffMemberId: string
+  staffMemberId: string | null
   staffName: string
+  department: string
   timeIn: string
   timeOut: string | null
   autoLoggedOut: boolean
+  note: string | null
   createdAt: string
 }
 
 export interface AttendanceFilters {
   staffMemberId: string | 'all'
+  department: string | 'all'
   dateFrom: string | null
   dateTo: string | null
 }
