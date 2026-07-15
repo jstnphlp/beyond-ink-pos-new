@@ -16,6 +16,7 @@ export const useStaffStore = create<StaffState>((set) => ({
 
   attendanceFilters: {
     staffMemberId: 'all',
+    department: 'all',
     dateFrom: null,
     dateTo: null,
   },

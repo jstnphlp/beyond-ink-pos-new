@@ -16,6 +16,18 @@ const DEPARTMENT_COLORS: Record<string, string> = {
   Dev: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20',
   physical_dept:
     'bg-blue-500/15 text-blue-400 border-blue-500/30 hover:bg-blue-500/20',
+  design_dept:
+    'bg-purple-500/15 text-purple-400 border-purple-500/30 hover:bg-purple-500/20',
+  dev_dept:
+    'bg-emerald-500/15 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20',
+  owner:
+    'bg-amber-500/15 text-amber-400 border-amber-500/30 hover:bg-amber-500/20',
+}
+
+const DEPT_DISPLAY: Record<string, string> = {
+  physical_dept: 'Physical',
+  design_dept: 'Design',
+  dev_dept: 'Development',
 }
 
 function useClock() {
@@ -30,7 +42,7 @@ function useClock() {
 export function Header() {
   const now = useClock()
   const { data: activeSessions } = useActiveSessions()
-  const { displayName, role } = useAuth()
+  const { displayName, role, department } = useAuth()
   const isMobile = useIsMobile()
   const [sheetOpen, setSheetOpen] = useState(false)
 
@@ -90,9 +102,13 @@ export function Header() {
         {/* Department badge */}
         <Badge
           variant="outline"
-          className={`border ${DEPARTMENT_COLORS['physical_dept']} text-xs font-semibold hidden sm:inline-flex`}
+          className={`border ${
+            role === 'owner'
+              ? DEPARTMENT_COLORS['owner']
+              : DEPARTMENT_COLORS[department ?? 'physical_dept'] ?? DEPARTMENT_COLORS['physical_dept']
+          } text-xs font-semibold hidden sm:inline-flex`}
         >
-          Physical
+          {role === 'owner' ? 'Owner' : (DEPT_DISPLAY[department ?? ''] ?? 'Staff')}
         </Badge>
 
         {/* User */}
@@ -102,7 +118,7 @@ export function Header() {
               {displayName || 'Unknown'}
             </p>
             <p className="mt-0.5 text-xs text-muted-foreground">
-              {role === 'owner' ? 'Owner' : 'Staff'}
+              {role === 'owner' ? 'Owner' : (DEPT_DISPLAY[department ?? ''] ?? 'Staff')}
               {activeNames.length > 0 && ` · ${activeNames.length} on shift`}
             </p>
           </div>
