@@ -21,6 +21,8 @@ import {
   useSetBalanceOverride,
   useClearBalanceOverride,
 } from '@/shared/hooks/use-wallet'
+import { useActivityLogs } from '@/shared/hooks/use-audit-log'
+import { useAuth } from '@/shared/hooks/use-auth'
 import {
   Banknote,
   Smartphone,
@@ -32,8 +34,11 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   AlertTriangle,
+  ScrollText,
+  ShieldCheck,
 } from 'lucide-react'
 import type { WalletEntry, CreateWalletEntryInput } from '@/shared/api/wallet'
+import type { ActivityLogEntry, ActivityAction } from '@/shared/api/audit-log'
 
 // ─── Balance Card (editable via dialog) ───────────────────────────────────────
 
@@ -213,10 +218,12 @@ function AddEntryDialog({
   categories,
   open,
   onOpenChange,
+  performedBy,
 }: {
   categories: { id: string; name: string }[]
   open: boolean
   onOpenChange: (open: boolean) => void
+  performedBy: string
 }) {
   const [type, setType] = useState<'expense' | 'income'>('expense')
   const [amount, setAmount] = useState('')
@@ -267,13 +274,14 @@ function AddEntryDialog({
       }
     }
 
-    const entry: CreateWalletEntryInput = {
+    const entry: CreateWalletEntryInput & { performedBy: string } = {
       type,
       amount: parsedAmount,
       description: description.trim(),
       categoryId: finalCategoryId,
       paymentMethod,
       entryDate,
+      performedBy,
     }
 
     createEntry.mutate(entry, {
@@ -485,7 +493,7 @@ function EntriesTable({
 }: {
   entries: WalletEntry[]
   isLoading: boolean
-  onDelete: (id: string) => void
+  onDelete: (id: string, entry: WalletEntry) => void
   isDeleting: boolean
 }) {
   const [filter, setFilter] = useState<'all' | 'cash' | 'gcash'>('all')
@@ -583,7 +591,7 @@ function EntriesTable({
                     <DeleteEntryDialog
                       entry={entry}
                       isPending={isDeleting}
-                      onConfirm={() => onDelete(entry.id)}
+                      onConfirm={() => onDelete(entry.id, entry)}
                     />
                   </td>
                 </tr>
@@ -671,19 +679,133 @@ function TransactionsTable({
   )
 }
 
+// ─── Activity Log ─────────────────────────────────────────────────────────────
+
+const ACTION_CONFIG: Record<ActivityAction, { label: string; color: string; icon: React.ReactNode }> = {
+  balance_override_set: {
+    label: 'Override set',
+    color: 'text-amber-400',
+    icon: <ShieldCheck className="h-3.5 w-3.5" />,
+  },
+  balance_override_cleared: {
+    label: 'Override cleared',
+    color: 'text-amber-400/70',
+    icon: <ShieldCheck className="h-3.5 w-3.5" />,
+  },
+  expense_added: {
+    label: 'Expense added',
+    color: 'text-red-400',
+    icon: <ArrowDownRight className="h-3.5 w-3.5" />,
+  },
+  income_added: {
+    label: 'Income added',
+    color: 'text-emerald-400',
+    icon: <ArrowUpRight className="h-3.5 w-3.5" />,
+  },
+  entry_deleted: {
+    label: 'Entry deleted',
+    color: 'text-muted-foreground',
+    icon: <Trash2 className="h-3.5 w-3.5" />,
+  },
+}
+
+function formatLogTime(iso: string): string {
+  const d = new Date(iso)
+  const now = new Date()
+  const diffMs = now.getTime() - d.getTime()
+  const diffMins = Math.floor(diffMs / 60_000)
+  const diffHrs = Math.floor(diffMs / 3_600_000)
+
+  if (diffMins < 1) return 'Just now'
+  if (diffMins < 60) return `${diffMins}m ago`
+  if (diffHrs < 24) return `${diffHrs}h ago`
+
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) +
+    ' ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+}
+
+function ActivityLog({ logs, isLoading }: { logs: ActivityLogEntry[]; isLoading: boolean }) {
+  return (
+    <div>
+      <div className="mb-3 flex items-center gap-2">
+        <ScrollText className="h-4 w-4 text-muted-foreground" />
+        <h2 className="text-sm font-semibold text-foreground">Activity Log</h2>
+      </div>
+      {isLoading ? (
+        <p className="text-sm text-muted-foreground">Loading...</p>
+      ) : logs.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No activity yet.</p>
+      ) : (
+        <div className="space-y-1">
+          {logs.map((log) => {
+            const config = ACTION_CONFIG[log.action]
+            return (
+              <div
+                key={log.id}
+                className="flex items-start gap-3 rounded-lg border border-border/40 bg-card/50 px-4 py-3"
+              >
+                <div className={cn('mt-0.5 shrink-0', config.color)}>
+                  {config.icon}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-foreground">
+                      {log.performedBy}
+                    </span>
+                    <span className={cn('text-xs font-medium', config.color)}>
+                      {config.label}
+                    </span>
+                  </div>
+                  <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
+                    {log.paymentMethod && (
+                      <span className="inline-flex items-center gap-1">
+                        {log.paymentMethod === 'cash' ? (
+                          <Banknote className="h-3 w-3" />
+                        ) : (
+                          <Smartphone className="h-3 w-3" />
+                        )}
+                        {log.paymentMethod === 'cash' ? 'Cash' : 'GCash'}
+                      </span>
+                    )}
+                    {log.amount != null && (
+                      <span className="font-semibold tabular-nums">
+                        ₱{log.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    )}
+                    {log.description && (
+                      <span className="truncate">{log.description}</span>
+                    )}
+                  </div>
+                </div>
+                <span className="shrink-0 text-[11px] text-muted-foreground/70">
+                  {formatLogTime(log.createdAt)}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export function WalletPage() {
+  const { displayName } = useAuth()
   const { data: summary, isLoading: loadingSummary } = useWalletSummary()
   const { data: transactions, isLoading: loadingTx } = useWalletTransactions()
   const { data: entries = [], isLoading: loadingEntries } = useWalletEntries()
   const { data: categories = [] } = useWalletCategories()
+  const { data: activityLogs = [], isLoading: loadingLogs } = useActivityLogs()
 
   const deleteEntry = useDeleteWalletEntry()
   const setOverride = useSetBalanceOverride()
   const clearOverride = useClearBalanceOverride()
 
   const [addEntryOpen, setAddEntryOpen] = useState(false)
+
+  const performedBy = displayName ?? 'Unknown'
 
   if (loadingSummary) {
     return (
@@ -732,8 +854,8 @@ export function WalletPage() {
           computedAmount={cashSales}
           overrideAmount={cashOverride}
           entriesNet={cashEntriesNet}
-          onSetOverride={(amount) => setOverride.mutate({ paymentMethod: 'cash', amount })}
-          onClearOverride={() => clearOverride.mutate('cash')}
+          onSetOverride={(amount) => setOverride.mutate({ paymentMethod: 'cash', amount, performedBy })}
+          onClearOverride={() => clearOverride.mutate({ paymentMethod: 'cash', performedBy })}
           isSaving={setOverride.isPending}
         />
         <BalanceCard
@@ -743,8 +865,8 @@ export function WalletPage() {
           computedAmount={gcashSales}
           overrideAmount={gcashOverride}
           entriesNet={gcashEntriesNet}
-          onSetOverride={(amount) => setOverride.mutate({ paymentMethod: 'gcash', amount })}
-          onClearOverride={() => clearOverride.mutate('gcash')}
+          onSetOverride={(amount) => setOverride.mutate({ paymentMethod: 'gcash', amount, performedBy })}
+          onClearOverride={() => clearOverride.mutate({ paymentMethod: 'gcash', performedBy })}
           isSaving={setOverride.isPending}
         />
         <TotalBalanceCard amount={displayCombined} />
@@ -754,18 +876,22 @@ export function WalletPage() {
       <EntriesTable
         entries={entries}
         isLoading={loadingEntries}
-        onDelete={(id) => deleteEntry.mutate(id)}
+        onDelete={(id, entry) => deleteEntry.mutate({ id, entry, performedBy })}
         isDeleting={deleteEntry.isPending}
       />
 
       {/* Transactions */}
       <TransactionsTable transactions={transactions ?? []} isLoading={loadingTx} />
 
+      {/* Activity Log */}
+      <ActivityLog logs={activityLogs} isLoading={loadingLogs} />
+
       {/* Add Entry Dialog */}
       <AddEntryDialog
         categories={categories}
         open={addEntryOpen}
         onOpenChange={setAddEntryOpen}
+        performedBy={performedBy}
       />
     </div>
   )
