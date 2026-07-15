@@ -5,6 +5,10 @@ export interface WalletSummary {
   gcashTotal: number
   combinedTotal: number
   transactionCount: number
+  cashEntriesNet: number
+  gcashEntriesNet: number
+  cashOverride: number | null
+  gcashOverride: number | null
 }
 
 export interface WalletTransaction {
@@ -16,30 +20,93 @@ export interface WalletTransaction {
   customerName: string | null
 }
 
+export interface WalletCategory {
+  id: string
+  name: string
+  isDefault: boolean
+}
+
+export interface WalletEntry {
+  id: string
+  type: 'expense' | 'income'
+  amount: number
+  description: string
+  categoryId: string | null
+  categoryName: string | null
+  paymentMethod: 'cash' | 'gcash'
+  entryDate: string
+  createdAt: string
+}
+
+export interface CreateWalletEntryInput {
+  type: 'expense' | 'income'
+  amount: number
+  description: string
+  categoryId?: string | null
+  paymentMethod: 'cash' | 'gcash'
+  entryDate?: string
+}
+
+// ─── Summary ──────────────────────────────────────────────────────────────────
+
 export async function fetchWalletSummary(): Promise<WalletSummary> {
-  const { data, error } = await supabase
-    .from('sales_transactions')
-    .select('final_total, payment_method')
-    .eq('status', 'completed')
+  const [salesResult, entriesResult, overridesResult] = await Promise.all([
+    supabase
+      .from('sales_transactions')
+      .select('final_total, payment_method')
+      .eq('status', 'completed'),
+    supabase
+      .from('wallet_entries')
+      .select('type, amount, payment_method'),
+    supabase
+      .from('wallet_balance_overrides')
+      .select('payment_method, amount'),
+  ])
 
-  if (error) throw error
+  if (salesResult.error) throw salesResult.error
+  if (entriesResult.error) throw entriesResult.error
+  if (overridesResult.error) throw overridesResult.error
 
-  let cashTotal = 0
-  let gcashTotal = 0
+  let cashSales = 0
+  let gcashSales = 0
 
-  for (const row of data ?? []) {
+  for (const row of salesResult.data ?? []) {
     const amount = Number(row.final_total)
-    if (row.payment_method === 'cash') cashTotal += amount
-    else if (row.payment_method === 'gcash') gcashTotal += amount
+    if (row.payment_method === 'cash') cashSales += amount
+    else if (row.payment_method === 'gcash') gcashSales += amount
   }
+
+  let cashEntriesNet = 0
+  let gcashEntriesNet = 0
+
+  for (const row of entriesResult.data ?? []) {
+    const amount = Number(row.amount)
+    const sign = row.type === 'income' ? 1 : -1
+    if (row.payment_method === 'cash') cashEntriesNet += amount * sign
+    else if (row.payment_method === 'gcash') gcashEntriesNet += amount * sign
+  }
+
+  const overrides = new Map<string, number>()
+  for (const row of overridesResult.data ?? []) {
+    overrides.set(row.payment_method, Number(row.amount))
+  }
+
+  const cashTotal = cashSales + cashEntriesNet
+  const gcashTotal = gcashSales + gcashEntriesNet
 
   return {
     cashTotal,
     gcashTotal,
     combinedTotal: cashTotal + gcashTotal,
-    transactionCount: (data ?? []).length,
+    transactionCount: (salesResult.data ?? []).length,
+    cashEntriesNet,
+    gcashEntriesNet,
+    cashOverride: overrides.get('cash') ?? null,
+    gcashOverride: overrides.get('gcash') ?? null,
   }
 }
+
+// ─── Transactions ─────────────────────────────────────────────────────────────
 
 export async function fetchWalletTransactions(): Promise<WalletTransaction[]> {
   const { data, error } = await supabase
@@ -59,4 +126,142 @@ export async function fetchWalletTransactions(): Promise<WalletTransaction[]> {
     completedAt: row.completed_at,
     customerName: row.customer_name,
   }))
+}
+
+// ─── Categories ───────────────────────────────────────────────────────────────
+
+export async function fetchWalletCategories(): Promise<WalletCategory[]> {
+  const { data, error } = await supabase
+    .from('wallet_categories')
+    .select('id, name, is_default')
+    .order('is_default', { ascending: false })
+    .order('name')
+
+  if (error) throw error
+
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    name: row.name,
+    isDefault: row.is_default,
+  }))
+}
+
+export async function createWalletCategory(name: string): Promise<WalletCategory> {
+  const { data, error } = await supabase
+    .from('wallet_categories')
+    .insert({ name })
+    .select('id, name, is_default')
+    .single()
+
+  if (error) throw error
+
+  return {
+    id: data.id,
+    name: data.name,
+    isDefault: data.is_default,
+  }
+}
+
+// ─── Entries ──────────────────────────────────────────────────────────────────
+
+export async function fetchWalletEntries(
+  paymentMethod?: 'cash' | 'gcash'
+): Promise<WalletEntry[]> {
+  let query = supabase
+    .from('wallet_entries')
+    .select('id, type, amount, description, category_id, payment_method, entry_date, created_at, wallet_categories(name)')
+    .order('entry_date', { ascending: false })
+    .order('created_at', { ascending: false })
+
+  if (paymentMethod) {
+    query = query.eq('payment_method', paymentMethod)
+  }
+
+  const { data, error } = await query
+
+  if (error) throw error
+
+  return (data ?? []).map((row) => {
+    const rawCat = row.wallet_categories as unknown
+    const catName = Array.isArray(rawCat)
+      ? (rawCat[0]?.name ?? null)
+      : ((rawCat as { name: string } | null)?.name ?? null)
+
+    return {
+      id: row.id,
+      type: row.type as 'expense' | 'income',
+      amount: Number(row.amount),
+      description: row.description,
+      categoryId: row.category_id,
+      categoryName: catName,
+      paymentMethod: row.payment_method as 'cash' | 'gcash',
+      entryDate: row.entry_date,
+      createdAt: row.created_at,
+    }
+  })
+}
+
+export async function createWalletEntry(entry: CreateWalletEntryInput): Promise<WalletEntry> {
+  const { data, error } = await supabase
+    .from('wallet_entries')
+    .insert({
+      type: entry.type,
+      amount: entry.amount,
+      description: entry.description,
+      category_id: entry.categoryId ?? null,
+      payment_method: entry.paymentMethod,
+      entry_date: entry.entryDate ?? new Date().toISOString().slice(0, 10),
+    })
+    .select('id, type, amount, description, category_id, payment_method, entry_date, created_at')
+    .single()
+
+  if (error) throw error
+
+  return {
+    id: data.id,
+    type: data.type as 'expense' | 'income',
+    amount: Number(data.amount),
+    description: data.description,
+    categoryId: data.category_id,
+    categoryName: null,
+    paymentMethod: data.payment_method as 'cash' | 'gcash',
+    entryDate: data.entry_date,
+    createdAt: data.created_at,
+  }
+}
+
+export async function deleteWalletEntry(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('wallet_entries')
+    .delete()
+    .eq('id', id)
+
+  if (error) throw error
+}
+
+// ─── Balance Overrides ────────────────────────────────────────────────────────
+
+export async function setWalletBalanceOverride(
+  paymentMethod: 'cash' | 'gcash',
+  amount: number
+): Promise<void> {
+  const { error } = await supabase
+    .from('wallet_balance_overrides')
+    .upsert(
+      { payment_method: paymentMethod, amount },
+      { onConflict: 'payment_method' }
+    )
+
+  if (error) throw error
+}
+
+export async function clearWalletBalanceOverride(
+  paymentMethod: 'cash' | 'gcash'
+): Promise<void> {
+  const { error } = await supabase
+    .from('wallet_balance_overrides')
+    .delete()
+    .eq('payment_method', paymentMethod)
+
+  if (error) throw error
 }
