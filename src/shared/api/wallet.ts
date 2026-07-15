@@ -9,6 +9,10 @@ export interface WalletSummary {
   gcashEntriesNet: number
   cashOverride: number | null
   gcashOverride: number | null
+  cashSalesTotal: number
+  gcashSalesTotal: number
+  cashSalesAfterOverride: number
+  gcashSalesAfterOverride: number
 }
 
 export interface WalletTransaction {
@@ -53,27 +57,48 @@ export async function fetchWalletSummary(): Promise<WalletSummary> {
   const [salesResult, entriesResult, overridesResult] = await Promise.all([
     supabase
       .from('sales_transactions')
-      .select('final_total, payment_method')
+      .select('final_total, payment_method, completed_at')
       .eq('status', 'completed'),
     supabase
       .from('wallet_entries')
       .select('type, amount, payment_method'),
     supabase
       .from('wallet_balance_overrides')
-      .select('payment_method, amount'),
+      .select('payment_method, amount, updated_at'),
   ])
 
   if (salesResult.error) throw salesResult.error
   if (entriesResult.error) throw entriesResult.error
   if (overridesResult.error) throw overridesResult.error
 
-  let cashSales = 0
-  let gcashSales = 0
+  const overrides = new Map<string, { amount: number; updatedAt: string }>()
+  for (const row of overridesResult.data ?? []) {
+    overrides.set(row.payment_method, { amount: Number(row.amount), updatedAt: row.updated_at })
+  }
+
+  const cashOverrideData = overrides.get('cash')
+  const gcashOverrideData = overrides.get('gcash')
+  const cashOverride = cashOverrideData?.amount ?? null
+  const gcashOverride = gcashOverrideData?.amount ?? null
+
+  let cashSalesTotal = 0
+  let gcashSalesTotal = 0
+  let cashSalesAfterOverride = 0
+  let gcashSalesAfterOverride = 0
 
   for (const row of salesResult.data ?? []) {
     const amount = Number(row.final_total)
-    if (row.payment_method === 'cash') cashSales += amount
-    else if (row.payment_method === 'gcash') gcashSales += amount
+    if (row.payment_method === 'cash') {
+      cashSalesTotal += amount
+      if (cashOverrideData && row.completed_at > cashOverrideData.updatedAt) {
+        cashSalesAfterOverride += amount
+      }
+    } else if (row.payment_method === 'gcash') {
+      gcashSalesTotal += amount
+      if (gcashOverrideData && row.completed_at > gcashOverrideData.updatedAt) {
+        gcashSalesAfterOverride += amount
+      }
+    }
   }
 
   let cashEntriesNet = 0
@@ -86,13 +111,12 @@ export async function fetchWalletSummary(): Promise<WalletSummary> {
     else if (row.payment_method === 'gcash') gcashEntriesNet += amount * sign
   }
 
-  const overrides = new Map<string, number>()
-  for (const row of overridesResult.data ?? []) {
-    overrides.set(row.payment_method, Number(row.amount))
-  }
-
-  const cashTotal = cashSales + cashEntriesNet
-  const gcashTotal = gcashSales + gcashEntriesNet
+  const cashTotal = cashOverride !== null
+    ? cashOverride + cashSalesAfterOverride
+    : cashSalesTotal + cashEntriesNet
+  const gcashTotal = gcashOverride !== null
+    ? gcashOverride + gcashSalesAfterOverride
+    : gcashSalesTotal + gcashEntriesNet
 
   return {
     cashTotal,
@@ -101,8 +125,12 @@ export async function fetchWalletSummary(): Promise<WalletSummary> {
     transactionCount: (salesResult.data ?? []).length,
     cashEntriesNet,
     gcashEntriesNet,
-    cashOverride: overrides.get('cash') ?? null,
-    gcashOverride: overrides.get('gcash') ?? null,
+    cashOverride,
+    gcashOverride,
+    cashSalesTotal,
+    gcashSalesTotal,
+    cashSalesAfterOverride,
+    gcashSalesAfterOverride,
   }
 }
 
@@ -248,7 +276,7 @@ export async function setWalletBalanceOverride(
   const { error } = await supabase
     .from('wallet_balance_overrides')
     .upsert(
-      { payment_method: paymentMethod, amount },
+      { payment_method: paymentMethod, amount, updated_at: new Date().toISOString() },
       { onConflict: 'payment_method' }
     )
 

@@ -37,6 +37,8 @@ import {
   ScrollText,
   ShieldCheck,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react'
 import type { WalletEntry, CreateWalletEntryInput } from '@/shared/api/wallet'
 import type { ActivityLogEntry, ActivityAction } from '@/shared/api/audit-log'
@@ -49,6 +51,7 @@ function BalanceCard({
   color,
   computedAmount,
   overrideAmount,
+  salesAfterOverride,
   entriesNet,
   onSetOverride,
   onClearOverride,
@@ -59,6 +62,7 @@ function BalanceCard({
   color: 'emerald' | 'blue'
   computedAmount: number
   overrideAmount: number | null
+  salesAfterOverride: number
   entriesNet: number
   onSetOverride: (amount: number) => void
   onClearOverride: () => void
@@ -67,9 +71,10 @@ function BalanceCard({
   const [open, setOpen] = useState(false)
   const [editValue, setEditValue] = useState('')
 
-  const baseAmount = overrideAmount ?? computedAmount
-  const displayAmount = baseAmount + entriesNet
   const hasOverride = overrideAmount !== null
+  const displayAmount = hasOverride
+    ? overrideAmount + salesAfterOverride
+    : computedAmount + entriesNet
 
   const colorClasses = {
     emerald: {
@@ -93,7 +98,7 @@ function BalanceCard({
   function handleOpenChange(nextOpen: boolean) {
     setOpen(nextOpen)
     if (nextOpen) {
-      setEditValue(displayAmount.toString())
+      setEditValue((hasOverride ? overrideAmount : displayAmount).toString())
     }
   }
 
@@ -641,58 +646,66 @@ function TransactionsTable({
           )}
         />
       </button>
-      {expanded && (
-        isLoading ? (
-          <p className="text-sm text-muted-foreground">Loading...</p>
-        ) : transactions.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No completed sales yet.</p>
-        ) : (
-          <div className="overflow-x-auto rounded-xl border border-border/60">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border/60 bg-muted/30">
-                  <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Transaction</th>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Customer</th>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Method</th>
-                  <th className="px-4 py-2.5 text-right text-xs font-medium text-muted-foreground">Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                {transactions.map((tx) => (
-                  <tr key={tx.id} className="border-b border-border/30 last:border-0">
-                    <td className="px-4 py-2.5 font-mono text-xs text-muted-foreground">
-                      #{tx.transactionNumber}
-                    </td>
-                    <td className="px-4 py-2.5 text-foreground">
-                      {tx.customerName || '—'}
-                    </td>
-                    <td className="px-4 py-2.5">
-                      <span
-                        className={cn(
-                          'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold',
-                          tx.paymentMethod === 'cash'
-                            ? 'bg-emerald-500/15 text-emerald-400'
-                            : 'bg-blue-500/15 text-blue-400'
-                        )}
-                      >
-                        {tx.paymentMethod === 'cash' ? (
-                          <Banknote className="h-3 w-3" />
-                        ) : (
-                          <Smartphone className="h-3 w-3" />
-                        )}
-                        {tx.paymentMethod === 'cash' ? 'Cash' : 'GCash'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2.5 text-right font-semibold tabular-nums text-foreground">
-                      ₱{tx.finalTotal.toLocaleString()}
-                    </td>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateRows: expanded ? '1fr' : '0fr',
+          transition: 'grid-template-rows 300ms ease',
+        }}
+      >
+        <div className="overflow-hidden">
+          {isLoading ? (
+            <p className="text-sm text-muted-foreground">Loading...</p>
+          ) : transactions.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No completed sales yet.</p>
+          ) : (
+            <div className="overflow-x-auto rounded-xl border border-border/60">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border/60 bg-muted/30">
+                    <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Transaction</th>
+                    <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Customer</th>
+                    <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Method</th>
+                    <th className="px-4 py-2.5 text-right text-xs font-medium text-muted-foreground">Amount</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )
-      )}
+                </thead>
+                <tbody>
+                  {transactions.map((tx) => (
+                    <tr key={tx.id} className="border-b border-border/30 last:border-0">
+                      <td className="px-4 py-2.5 font-mono text-xs text-muted-foreground">
+                        #{tx.transactionNumber}
+                      </td>
+                      <td className="px-4 py-2.5 text-foreground">
+                        {tx.customerName || '—'}
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <span
+                          className={cn(
+                            'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold',
+                            tx.paymentMethod === 'cash'
+                              ? 'bg-emerald-500/15 text-emerald-400'
+                              : 'bg-blue-500/15 text-blue-400'
+                          )}
+                        >
+                          {tx.paymentMethod === 'cash' ? (
+                            <Banknote className="h-3 w-3" />
+                          ) : (
+                            <Smartphone className="h-3 w-3" />
+                          )}
+                          {tx.paymentMethod === 'cash' ? 'Cash' : 'GCash'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2.5 text-right font-semibold tabular-nums text-foreground">
+                        ₱{tx.finalTotal.toLocaleString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
@@ -742,67 +755,128 @@ function formatLogTime(iso: string): string {
     ' ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
 }
 
-function ActivityLog({ logs, isLoading }: { logs: ActivityLogEntry[]; isLoading: boolean }) {
+function ActivityLog({
+  logs,
+  isLoading,
+  page,
+  onPrevPage,
+  onNextPage,
+  hasMore,
+}: {
+  logs: ActivityLogEntry[]
+  isLoading: boolean
+  page: number
+  onPrevPage: () => void
+  onNextPage: () => void
+  hasMore: boolean
+}) {
+  const [expanded, setExpanded] = useState(false)
+
   return (
     <div>
-      <div className="mb-3 flex items-center gap-2">
+      <button
+        type="button"
+        onClick={() => setExpanded(!expanded)}
+        className="mb-3 flex w-full items-center gap-2 text-left"
+      >
         <ScrollText className="h-4 w-4 text-muted-foreground" />
         <h2 className="text-sm font-semibold text-foreground">Activity Log</h2>
-      </div>
-      {isLoading ? (
-        <p className="text-sm text-muted-foreground">Loading...</p>
-      ) : logs.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No activity yet.</p>
-      ) : (
-        <div className="space-y-1">
-          {logs.map((log) => {
-            const config = ACTION_CONFIG[log.action]
-            return (
-              <div
-                key={log.id}
-                className="flex items-start gap-3 rounded-lg border border-border/40 bg-card/50 px-4 py-3"
-              >
-                <div className={cn('mt-0.5 shrink-0', config.color)}>
-                  {config.icon}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-foreground">
-                      {log.performedBy}
-                    </span>
-                    <span className={cn('text-xs font-medium', config.color)}>
-                      {config.label}
-                    </span>
-                  </div>
-                  <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
-                    {log.paymentMethod && (
-                      <span className="inline-flex items-center gap-1">
-                        {log.paymentMethod === 'cash' ? (
-                          <Banknote className="h-3 w-3" />
-                        ) : (
-                          <Smartphone className="h-3 w-3" />
-                        )}
-                        {log.paymentMethod === 'cash' ? 'Cash' : 'GCash'}
+        <ChevronDown
+          className={cn(
+            'h-4 w-4 text-muted-foreground transition-transform ml-auto',
+            expanded && 'rotate-180'
+          )}
+        />
+      </button>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateRows: expanded ? '1fr' : '0fr',
+          transition: 'grid-template-rows 300ms ease',
+        }}
+      >
+        <div className="overflow-hidden">
+          {isLoading ? (
+            <p className="text-sm text-muted-foreground">Loading...</p>
+          ) : logs.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No activity yet.</p>
+          ) : (
+            <>
+              <div className="space-y-1">
+                {logs.map((log) => {
+                  const config = ACTION_CONFIG[log.action]
+                  return (
+                    <div
+                      key={log.id}
+                      className="flex items-start gap-3 rounded-lg border border-border/40 bg-card/50 px-4 py-3"
+                    >
+                      <div className={cn('mt-0.5 shrink-0', config.color)}>
+                        {config.icon}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-foreground">
+                            {log.performedBy}
+                          </span>
+                          <span className={cn('text-xs font-medium', config.color)}>
+                            {config.label}
+                          </span>
+                        </div>
+                        <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
+                          {log.paymentMethod && (
+                            <span className="inline-flex items-center gap-1">
+                              {log.paymentMethod === 'cash' ? (
+                                <Banknote className="h-3 w-3" />
+                              ) : (
+                                <Smartphone className="h-3 w-3" />
+                              )}
+                              {log.paymentMethod === 'cash' ? 'Cash' : 'GCash'}
+                            </span>
+                          )}
+                          {log.amount != null && (
+                            <span className="font-semibold tabular-nums">
+                              ₱{log.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                          )}
+                          {log.description && (
+                            <span className="truncate">{log.description}</span>
+                          )}
+                        </div>
+                      </div>
+                      <span className="shrink-0 text-[11px] text-muted-foreground/70">
+                        {formatLogTime(log.createdAt)}
                       </span>
-                    )}
-                    {log.amount != null && (
-                      <span className="font-semibold tabular-nums">
-                        ₱{log.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </span>
-                    )}
-                    {log.description && (
-                      <span className="truncate">{log.description}</span>
-                    )}
-                  </div>
-                </div>
-                <span className="shrink-0 text-[11px] text-muted-foreground/70">
-                  {formatLogTime(log.createdAt)}
-                </span>
+                    </div>
+                  )
+                })}
               </div>
-            )
-          })}
+              <div className="mt-3 flex items-center justify-between">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={page === 0}
+                  onClick={onPrevPage}
+                  className="gap-1"
+                >
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                  Prev
+                </Button>
+                <span className="text-xs text-muted-foreground">Page {page + 1}</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={!hasMore}
+                  onClick={onNextPage}
+                  className="gap-1"
+                >
+                  Next
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </>
+          )}
         </div>
-      )}
+      </div>
     </div>
   )
 }
@@ -815,13 +889,13 @@ export function WalletPage() {
   const { data: transactions, isLoading: loadingTx } = useWalletTransactions()
   const { data: entries = [], isLoading: loadingEntries } = useWalletEntries()
   const { data: categories = [] } = useWalletCategories()
-  const { data: activityLogs = [], isLoading: loadingLogs } = useActivityLogs()
+  const [addEntryOpen, setAddEntryOpen] = useState(false)
+  const [logPage, setLogPage] = useState(0)
+  const { data: activityLogs = [], isLoading: loadingLogs } = useActivityLogs(logPage)
 
   const deleteEntry = useDeleteWalletEntry()
   const setOverride = useSetBalanceOverride()
   const clearOverride = useClearBalanceOverride()
-
-  const [addEntryOpen, setAddEntryOpen] = useState(false)
 
   const performedBy = displayName ?? 'Unknown'
 
@@ -833,19 +907,16 @@ export function WalletPage() {
     )
   }
 
-  const cashComputed = summary?.cashTotal ?? 0
-  const gcashComputed = summary?.gcashTotal ?? 0
   const cashEntriesNet = summary?.cashEntriesNet ?? 0
   const gcashEntriesNet = summary?.gcashEntriesNet ?? 0
   const cashOverride = summary?.cashOverride ?? null
   const gcashOverride = summary?.gcashOverride ?? null
+  const cashSalesTotal = summary?.cashSalesTotal ?? 0
+  const gcashSalesTotal = summary?.gcashSalesTotal ?? 0
+  const cashSalesAfterOverride = summary?.cashSalesAfterOverride ?? 0
+  const gcashSalesAfterOverride = summary?.gcashSalesAfterOverride ?? 0
 
-  const cashSales = cashComputed - cashEntriesNet
-  const gcashSales = gcashComputed - gcashEntriesNet
-
-  const displayCash = (cashOverride ?? cashSales) + cashEntriesNet
-  const displayGcash = (gcashOverride ?? gcashSales) + gcashEntriesNet
-  const displayCombined = displayCash + displayGcash
+  const displayCombined = summary?.combinedTotal ?? 0
 
   return (
     <div className="space-y-6 p-4 md:p-6">
@@ -869,8 +940,9 @@ export function WalletPage() {
           label="Cash"
           icon={<Banknote className="h-4.5 w-4.5" />}
           color="emerald"
-          computedAmount={cashSales}
+          computedAmount={cashSalesTotal}
           overrideAmount={cashOverride}
+          salesAfterOverride={cashSalesAfterOverride}
           entriesNet={cashEntriesNet}
           onSetOverride={(amount) => setOverride.mutate({ paymentMethod: 'cash', amount, performedBy })}
           onClearOverride={() => clearOverride.mutate({ paymentMethod: 'cash', performedBy })}
@@ -880,8 +952,9 @@ export function WalletPage() {
           label="GCash"
           icon={<Smartphone className="h-4.5 w-4.5" />}
           color="blue"
-          computedAmount={gcashSales}
+          computedAmount={gcashSalesTotal}
           overrideAmount={gcashOverride}
+          salesAfterOverride={gcashSalesAfterOverride}
           entriesNet={gcashEntriesNet}
           onSetOverride={(amount) => setOverride.mutate({ paymentMethod: 'gcash', amount, performedBy })}
           onClearOverride={() => clearOverride.mutate({ paymentMethod: 'gcash', performedBy })}
@@ -902,7 +975,14 @@ export function WalletPage() {
       <TransactionsTable transactions={transactions ?? []} isLoading={loadingTx} />
 
       {/* Activity Log */}
-      <ActivityLog logs={activityLogs} isLoading={loadingLogs} />
+      <ActivityLog
+        logs={activityLogs}
+        isLoading={loadingLogs}
+        page={logPage}
+        onPrevPage={() => setLogPage((p) => Math.max(0, p - 1))}
+        onNextPage={() => setLogPage((p) => p + 1)}
+        hasMore={activityLogs.length === 10}
+      />
 
       {/* Add Entry Dialog */}
       <AddEntryDialog

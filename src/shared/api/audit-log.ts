@@ -42,12 +42,12 @@ export async function logActivity(input: LogActivityInput): Promise<void> {
   if (error) throw error
 }
 
-export async function fetchActivityLogs(limit = 50): Promise<ActivityLogEntry[]> {
+export async function fetchActivityLogs(limit = 10, offset = 0): Promise<ActivityLogEntry[]> {
   const { data, error } = await supabase
     .from('activity_log')
     .select('id, action, performed_by, payment_method, amount, description, metadata, created_at')
     .order('created_at', { ascending: false })
-    .limit(limit)
+    .range(offset, offset + limit - 1)
 
   if (error) throw error
 
