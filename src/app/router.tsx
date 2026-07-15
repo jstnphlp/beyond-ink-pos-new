@@ -100,6 +100,13 @@ const router = createBrowserRouter([
         },
       },
       {
+        path: '/trash',
+        lazy: async () => {
+          const { TrashPage } = await import('@/pages/trash')
+          return { Component: TrashPage }
+        },
+      },
+      {
         path: '/settings',
         lazy: async () => {
           const { SettingsPage } = await import('@/pages/settings')

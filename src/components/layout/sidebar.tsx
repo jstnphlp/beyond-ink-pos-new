@@ -12,6 +12,7 @@ import {
   Wrench,
   UserCog,
   DollarSign,
+  Trash2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/shared/hooks/use-auth'
@@ -62,6 +63,7 @@ const NAV_ITEMS: NavItem[] = [
     icon: Users,
     roles: ['owner', 'staff'],
   },
+  { to: '/trash', label: 'Trash', icon: Trash2, roles: ['owner'] },
   {
     to: '/settings',
     label: 'Settings',

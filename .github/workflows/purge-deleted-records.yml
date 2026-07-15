@@ -1,0 +1,29 @@
+name: Purge Deleted Records
+
+on:
+  schedule:
+    - cron: "0 19 * * *"
+  workflow_dispatch:
+
+jobs:
+  purge:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install postgresql-client-17
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y curl ca-certificates gnupg
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /usr/share/keyrings/postgresql-archive-keyring.gpg
+          echo "deb [signed-by=/usr/share/keyrings/postgresql-archive-keyring.gpg] http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-17
+
+      - name: Purge records older than 30 days
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          RESULT=$(/usr/lib/postgresql/17/bin/psql "$DATABASE_URL" -t -A -c \
+            "DELETE FROM \"deleted_records\" WHERE \"deleted_at\" < now() - interval '30 days';")
+          ROWS_DELETED=$(echo "$RESULT" | grep -oP 'DELETE \K\d+' || echo "0")
+          echo "Purged ${ROWS_DELETED} expired record(s) from deleted_records."

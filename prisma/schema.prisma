@@ -360,3 +360,17 @@ model AppSetting {
 
   @@map("app_settings")
 }
+
+// ─── Soft-Delete / Trash ─────────────────────────────────────────────────────
+
+model DeletedRecord {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tableName String   @map("table_name") @db.Text
+  recordId  String   @map("record_id") @db.Text
+  data      Json     @db.JsonB
+  deletedAt DateTime @default(now()) @map("deleted_at") @db.Timestamptz
+  deletedBy String?  @map("deleted_by") @db.Text
+
+  @@index([tableName, deletedAt])
+  @@map("deleted_records")
+}
