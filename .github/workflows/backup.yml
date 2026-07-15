@@ -1,0 +1,39 @@
+name: Nightly Postgres Backup
+
+on:
+  schedule:
+    - cron: "0 18 * * *"
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install postgresql-client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Dump database
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          TIMESTAMP=$(date -u +"%Y-%m-%d_%H-%M-%S")
+          pg_dump "$DATABASE_URL" -F c --no-owner --no-acl -f "backup_${TIMESTAMP}.dump"
+          echo "BACKUP_FILE=backup_${TIMESTAMP}.dump" >> "$GITHUB_ENV"
+
+      - name: Install awscli
+        run: pip install awscli
+
+      - name: Upload to Backblaze B2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.B2_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.B2_APP_KEY }}
+        run: |
+          aws s3 cp "$BACKUP_FILE" "s3://beyond-ink-pos-backups/backups/$BACKUP_FILE" \
+            --endpoint-url https://s3.us-east-005.backblazeb2.com
+
+      - name: Cleanup
+        if: always()
+        run: rm -f "$BACKUP_FILE"
