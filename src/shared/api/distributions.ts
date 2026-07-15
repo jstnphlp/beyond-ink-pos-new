@@ -40,6 +40,7 @@ export async function getPhysicalDistribution(
     .from('staff_sessions')
     .select('staff_member_id, staff_name, time_in, time_out')
     .not('time_out', 'is', null)
+    .not('staff_member_id', 'is', null)
 
   if (period.dateFrom) {
     query = query.gte('time_in', period.dateFrom)
