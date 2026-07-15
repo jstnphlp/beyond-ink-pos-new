@@ -36,7 +36,6 @@ import {
   AlertTriangle,
   ScrollText,
   ShieldCheck,
-  DollarSign,
 } from 'lucide-react'
 import type { WalletEntry, CreateWalletEntryInput } from '@/shared/api/wallet'
 import type { ActivityLogEntry, ActivityAction } from '@/shared/api/audit-log'
