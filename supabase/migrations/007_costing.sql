@@ -17,6 +17,138 @@ END
 $$;
 
 -- ═══════════════════════════════════════════════════════════════════════════════
+-- Deduplicate services and inventory_items (safe to re-run)
+-- ═══════════════════════════════════════════════════════════════════════════════
+
+-- Step 1: For duplicate services, reassign all FK references to the earliest-created row,
+--         deleting conflicting rows where a unique constraint would be violated.
+WITH ranked AS (
+  SELECT id, name, ROW_NUMBER() OVER (PARTITION BY name ORDER BY created_at) AS rn
+  FROM public.services
+),
+dupes AS (
+  SELECT id AS dup_id, (SELECT id FROM ranked r2 WHERE r2.name = ranked.name AND r2.rn = 1) AS keep_id
+  FROM ranked WHERE rn > 1
+)
+-- Delete conflicting service_material_prices
+DELETE FROM public.service_material_prices smp
+USING dupes d
+WHERE smp.service_id = d.dup_id
+  AND EXISTS (
+    SELECT 1 FROM public.service_material_prices k
+    WHERE k.service_id = d.keep_id AND k.inventory_item_id = smp.inventory_item_id
+  );
+
+WITH ranked AS (
+  SELECT id, name, ROW_NUMBER() OVER (PARTITION BY name ORDER BY created_at) AS rn
+  FROM public.services
+),
+dupes AS (
+  SELECT id AS dup_id, (SELECT id FROM ranked r2 WHERE r2.name = ranked.name AND r2.rn = 1) AS keep_id
+  FROM ranked WHERE rn > 1
+)
+-- Reassign remaining service_material_prices
+UPDATE public.service_material_prices smp SET service_id = d.keep_id
+FROM dupes d WHERE smp.service_id = d.dup_id;
+
+WITH ranked AS (
+  SELECT id, name, ROW_NUMBER() OVER (PARTITION BY name ORDER BY created_at) AS rn
+  FROM public.services
+),
+dupes AS (
+  SELECT id AS dup_id, (SELECT id FROM ranked r2 WHERE r2.name = ranked.name AND r2.rn = 1) AS keep_id
+  FROM ranked WHERE rn > 1
+)
+-- Delete conflicting cost_profiles
+DELETE FROM public.cost_profiles cp
+USING dupes d
+WHERE cp.service_id = d.dup_id
+  AND EXISTS (
+    SELECT 1 FROM public.cost_profiles k
+    WHERE k.service_id = d.keep_id AND k.inventory_item_id = cp.inventory_item_id
+  );
+
+WITH ranked AS (
+  SELECT id, name, ROW_NUMBER() OVER (PARTITION BY name ORDER BY created_at) AS rn
+  FROM public.services
+),
+dupes AS (
+  SELECT id AS dup_id, (SELECT id FROM ranked r2 WHERE r2.name = ranked.name AND r2.rn = 1) AS keep_id
+  FROM ranked WHERE rn > 1
+)
+-- Reassign remaining cost_profiles
+UPDATE public.cost_profiles cp SET service_id = d.keep_id
+FROM dupes d WHERE cp.service_id = d.dup_id;
+
+-- Delete duplicate services
+WITH ranked AS (
+  SELECT id, ROW_NUMBER() OVER (PARTITION BY name ORDER BY created_at) AS rn
+  FROM public.services
+)
+DELETE FROM public.services WHERE id IN (SELECT id FROM ranked WHERE rn > 1);
+
+-- Step 2: Same for inventory_items
+WITH ranked AS (
+  SELECT id, name, ROW_NUMBER() OVER (PARTITION BY name ORDER BY created_at) AS rn
+  FROM public.inventory_items
+),
+dupes AS (
+  SELECT id AS dup_id, (SELECT id FROM ranked r2 WHERE r2.name = ranked.name AND r2.rn = 1) AS keep_id
+  FROM ranked WHERE rn > 1
+)
+DELETE FROM public.service_material_prices smp
+USING dupes d
+WHERE smp.inventory_item_id = d.dup_id
+  AND EXISTS (
+    SELECT 1 FROM public.service_material_prices k
+    WHERE k.service_id = smp.service_id AND k.inventory_item_id = d.keep_id
+  );
+
+WITH ranked AS (
+  SELECT id, name, ROW_NUMBER() OVER (PARTITION BY name ORDER BY created_at) AS rn
+  FROM public.inventory_items
+),
+dupes AS (
+  SELECT id AS dup_id, (SELECT id FROM ranked r2 WHERE r2.name = ranked.name AND r2.rn = 1) AS keep_id
+  FROM ranked WHERE rn > 1
+)
+UPDATE public.service_material_prices smp SET inventory_item_id = d.keep_id
+FROM dupes d WHERE smp.inventory_item_id = d.dup_id;
+
+WITH ranked AS (
+  SELECT id, name, ROW_NUMBER() OVER (PARTITION BY name ORDER BY created_at) AS rn
+  FROM public.inventory_items
+),
+dupes AS (
+  SELECT id AS dup_id, (SELECT id FROM ranked r2 WHERE r2.name = ranked.name AND r2.rn = 1) AS keep_id
+  FROM ranked WHERE rn > 1
+)
+DELETE FROM public.cost_profiles cp
+USING dupes d
+WHERE cp.inventory_item_id = d.dup_id
+  AND EXISTS (
+    SELECT 1 FROM public.cost_profiles k
+    WHERE k.service_id = cp.service_id AND k.inventory_item_id = d.keep_id
+  );
+
+WITH ranked AS (
+  SELECT id, name, ROW_NUMBER() OVER (PARTITION BY name ORDER BY created_at) AS rn
+  FROM public.inventory_items
+),
+dupes AS (
+  SELECT id AS dup_id, (SELECT id FROM ranked r2 WHERE r2.name = ranked.name AND r2.rn = 1) AS keep_id
+  FROM ranked WHERE rn > 1
+)
+UPDATE public.cost_profiles cp SET inventory_item_id = d.keep_id
+FROM dupes d WHERE cp.inventory_item_id = d.dup_id;
+
+WITH ranked AS (
+  SELECT id, ROW_NUMBER() OVER (PARTITION BY name ORDER BY created_at) AS rn
+  FROM public.inventory_items
+)
+DELETE FROM public.inventory_items WHERE id IN (SELECT id FROM ranked WHERE rn > 1);
+
+-- ═══════════════════════════════════════════════════════════════════════════════
 -- Tables
 -- ═══════════════════════════════════════════════════════════════════════════════
 
