@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Calendar, Clock, Menu } from 'lucide-react'
+import { Calendar, Clock, Menu, Settings } from 'lucide-react'
 import { useActiveSessions } from '@/shared/hooks/use-staff'
 import { useAuth } from '@/shared/hooks/use-auth'
+import { useSettingsStore } from '@/stores/settings-store'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import { SidebarContent } from './sidebar'
 import { useIsMobile } from '@/shared/hooks/use-is-mobile'
@@ -45,6 +46,7 @@ export function Header() {
   const { displayName, role, department } = useAuth()
   const isMobile = useIsMobile()
   const [sheetOpen, setSheetOpen] = useState(false)
+  const { openSettings } = useSettingsStore()
 
   const timeStr = now.toLocaleTimeString('en-US', {
     hour: '2-digit',
@@ -113,6 +115,13 @@ export function Header() {
 
         {/* User */}
         <div className="flex items-center gap-2.5">
+          <button
+            onClick={openSettings}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-muted"
+            title="Settings"
+          >
+            <Settings className="h-4 w-4 text-muted-foreground" />
+          </button>
           <div className="hidden text-right sm:block">
             <p className="text-sm font-medium leading-none text-foreground">
               {displayName || 'Unknown'}

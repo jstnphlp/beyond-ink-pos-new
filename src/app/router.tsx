@@ -106,13 +106,6 @@ const router = createBrowserRouter([
           return { Component: TrashPage }
         },
       },
-      {
-        path: '/settings',
-        lazy: async () => {
-          const { SettingsPage } = await import('@/pages/settings')
-          return { Component: SettingsPage }
-        },
-      },
     ],
   },
   {
