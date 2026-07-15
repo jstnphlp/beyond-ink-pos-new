@@ -36,6 +36,7 @@ import {
   AlertTriangle,
   ScrollText,
   ShieldCheck,
+  ChevronDown,
 } from 'lucide-react'
 import type { WalletEntry, CreateWalletEntryInput } from '@/shared/api/wallet'
 import type { ActivityLogEntry, ActivityAction } from '@/shared/api/audit-log'
@@ -620,60 +621,77 @@ function TransactionsTable({
   }[]
   isLoading: boolean
 }) {
+  const [expanded, setExpanded] = useState(false)
+
   return (
     <div>
-      <h2 className="mb-3 text-sm font-semibold text-foreground">
-        Recent Completed Sales
-      </h2>
-      {isLoading ? (
-        <p className="text-sm text-muted-foreground">Loading...</p>
-      ) : transactions.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No completed sales yet.</p>
-      ) : (
-        <div className="overflow-x-auto rounded-xl border border-border/60">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border/60 bg-muted/30">
-                <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Transaction</th>
-                <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Customer</th>
-                <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Method</th>
-                <th className="px-4 py-2.5 text-right text-xs font-medium text-muted-foreground">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              {transactions.map((tx) => (
-                <tr key={tx.id} className="border-b border-border/30 last:border-0">
-                  <td className="px-4 py-2.5 font-mono text-xs text-muted-foreground">
-                    #{tx.transactionNumber}
-                  </td>
-                  <td className="px-4 py-2.5 text-foreground">
-                    {tx.customerName || '—'}
-                  </td>
-                  <td className="px-4 py-2.5">
-                    <span
-                      className={cn(
-                        'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold',
-                        tx.paymentMethod === 'cash'
-                          ? 'bg-emerald-500/15 text-emerald-400'
-                          : 'bg-blue-500/15 text-blue-400'
-                      )}
-                    >
-                      {tx.paymentMethod === 'cash' ? (
-                        <Banknote className="h-3 w-3" />
-                      ) : (
-                        <Smartphone className="h-3 w-3" />
-                      )}
-                      {tx.paymentMethod === 'cash' ? 'Cash' : 'GCash'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2.5 text-right font-semibold tabular-nums text-foreground">
-                    ₱{tx.finalTotal.toLocaleString()}
-                  </td>
+      <button
+        type="button"
+        onClick={() => setExpanded(!expanded)}
+        className="mb-3 flex w-full items-center gap-2 text-left"
+      >
+        <h2 className="text-sm font-semibold text-foreground">
+          Recent Completed Sales
+        </h2>
+        <span className="text-xs text-muted-foreground">({transactions.length})</span>
+        <ChevronDown
+          className={cn(
+            'h-4 w-4 text-muted-foreground transition-transform ml-auto',
+            expanded && 'rotate-180'
+          )}
+        />
+      </button>
+      {expanded && (
+        isLoading ? (
+          <p className="text-sm text-muted-foreground">Loading...</p>
+        ) : transactions.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No completed sales yet.</p>
+        ) : (
+          <div className="overflow-x-auto rounded-xl border border-border/60">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border/60 bg-muted/30">
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Transaction</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Customer</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Method</th>
+                  <th className="px-4 py-2.5 text-right text-xs font-medium text-muted-foreground">Amount</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {transactions.map((tx) => (
+                  <tr key={tx.id} className="border-b border-border/30 last:border-0">
+                    <td className="px-4 py-2.5 font-mono text-xs text-muted-foreground">
+                      #{tx.transactionNumber}
+                    </td>
+                    <td className="px-4 py-2.5 text-foreground">
+                      {tx.customerName || '—'}
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <span
+                        className={cn(
+                          'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold',
+                          tx.paymentMethod === 'cash'
+                            ? 'bg-emerald-500/15 text-emerald-400'
+                            : 'bg-blue-500/15 text-blue-400'
+                        )}
+                      >
+                        {tx.paymentMethod === 'cash' ? (
+                          <Banknote className="h-3 w-3" />
+                        ) : (
+                          <Smartphone className="h-3 w-3" />
+                        )}
+                        {tx.paymentMethod === 'cash' ? 'Cash' : 'GCash'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2.5 text-right font-semibold tabular-nums text-foreground">
+                      ₱{tx.finalTotal.toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )
       )}
     </div>
   )

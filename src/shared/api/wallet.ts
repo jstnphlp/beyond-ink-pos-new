@@ -114,7 +114,7 @@ export async function fetchWalletTransactions(): Promise<WalletTransaction[]> {
     .select('id, transaction_number, final_total, payment_method, completed_at, customer_name')
     .eq('status', 'completed')
     .order('completed_at', { ascending: false })
-    .limit(50)
+    .limit(10)
 
   if (error) throw error
 
