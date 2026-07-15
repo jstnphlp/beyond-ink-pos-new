@@ -24,7 +24,7 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
           TIMESTAMP=$(date -u +"%Y-%m-%d_%H-%M-%S")
-          pg_dump "$DATABASE_URL" -F c --no-owner --no-acl -f "backup_${TIMESTAMP}.dump"
+          /usr/lib/postgresql/17/bin/pg_dump "$DATABASE_URL" -F c --no-owner --no-acl -f "backup_${TIMESTAMP}.dump"
           echo "BACKUP_FILE=backup_${TIMESTAMP}.dump" >> "$GITHUB_ENV"
 
       - name: Install awscli
