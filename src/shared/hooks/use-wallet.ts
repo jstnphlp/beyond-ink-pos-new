@@ -11,7 +11,9 @@ import {
   setWalletBalanceOverride,
   clearWalletBalanceOverride,
 } from '@/shared/api/wallet'
-import type { CreateWalletEntryInput } from '@/shared/api/wallet'
+import type { CreateWalletEntryInput, WalletEntry } from '@/shared/api/wallet'
+import { logActivity } from '@/shared/api/audit-log'
+import { auditLogKeys } from './use-audit-log'
 
 export const walletKeys = {
   all: ['wallet'] as const,
@@ -60,11 +62,22 @@ export function useCreateWalletEntry() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (entry: CreateWalletEntryInput) => createWalletEntry(entry),
+    mutationFn: (entry: CreateWalletEntryInput & { performedBy: string }) =>
+      createWalletEntry(entry).then(async (result) => {
+        await logActivity({
+          action: entry.type === 'income' ? 'income_added' : 'expense_added',
+          performedBy: entry.performedBy,
+          paymentMethod: entry.paymentMethod,
+          amount: entry.amount,
+          description: entry.description,
+        }).catch(() => {})
+        return result
+      }),
     onSuccess: () => {
       toast.success('Entry added')
       queryClient.invalidateQueries({ queryKey: walletKeys.summary() })
       queryClient.invalidateQueries({ queryKey: walletKeys.entries() })
+      queryClient.invalidateQueries({ queryKey: auditLogKeys.all })
     },
     onError: () => {
       toast.error('Failed to add entry')
@@ -76,11 +89,21 @@ export function useDeleteWalletEntry() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (id: string) => deleteWalletEntry(id),
+    mutationFn: ({ id, entry, performedBy }: { id: string; entry?: WalletEntry; performedBy: string }) =>
+      deleteWalletEntry(id).then(async () => {
+        await logActivity({
+          action: 'entry_deleted',
+          performedBy,
+          paymentMethod: entry?.paymentMethod,
+          amount: entry?.amount,
+          description: entry?.description,
+        }).catch(() => {})
+      }),
     onSuccess: () => {
       toast.success('Entry deleted')
       queryClient.invalidateQueries({ queryKey: walletKeys.summary() })
       queryClient.invalidateQueries({ queryKey: walletKeys.entries() })
+      queryClient.invalidateQueries({ queryKey: auditLogKeys.all })
     },
     onError: () => {
       toast.error('Failed to delete entry')
@@ -107,11 +130,20 @@ export function useSetBalanceOverride() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ paymentMethod, amount }: { paymentMethod: 'cash' | 'gcash'; amount: number }) =>
-      setWalletBalanceOverride(paymentMethod, amount),
+    mutationFn: ({ paymentMethod, amount, performedBy }: { paymentMethod: 'cash' | 'gcash'; amount: number; performedBy: string }) =>
+      setWalletBalanceOverride(paymentMethod, amount).then(async () => {
+        await logActivity({
+          action: 'balance_override_set',
+          performedBy,
+          paymentMethod,
+          amount,
+          description: `Set ${paymentMethod} balance to ₱${amount.toLocaleString()}`,
+        }).catch(() => {})
+      }),
     onSuccess: () => {
       toast.success('Balance override saved')
       queryClient.invalidateQueries({ queryKey: walletKeys.summary() })
+      queryClient.invalidateQueries({ queryKey: auditLogKeys.all })
     },
     onError: () => {
       toast.error('Failed to save override')
@@ -123,11 +155,19 @@ export function useClearBalanceOverride() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (paymentMethod: 'cash' | 'gcash') =>
-      clearWalletBalanceOverride(paymentMethod),
+    mutationFn: ({ paymentMethod, performedBy }: { paymentMethod: 'cash' | 'gcash'; performedBy: string }) =>
+      clearWalletBalanceOverride(paymentMethod).then(async () => {
+        await logActivity({
+          action: 'balance_override_cleared',
+          performedBy,
+          paymentMethod,
+          description: `Cleared ${paymentMethod} balance override`,
+        }).catch(() => {})
+      }),
     onSuccess: () => {
       toast.success('Override cleared')
       queryClient.invalidateQueries({ queryKey: walletKeys.summary() })
+      queryClient.invalidateQueries({ queryKey: auditLogKeys.all })
     },
     onError: () => {
       toast.error('Failed to clear override')
