@@ -3,6 +3,7 @@ import { Sidebar } from './sidebar'
 import { Header } from './header'
 import { Toaster } from 'sonner'
 import { CatalogSync, DepartmentSync } from '@/components/catalog-sync'
+import { SettingsDialog } from '@/pages/settings'
 
 export function AppLayout() {
   return (
@@ -16,6 +17,7 @@ export function AppLayout() {
           <Outlet />
         </main>
       </div>
+      <SettingsDialog />
       <Toaster richColors position="top-right" />
     </div>
   )

@@ -5,7 +5,6 @@ import {
   FileText,
   Clock,
   Users,
-  Settings,
   LogOut,
   Wallet,
   ChartPie,
@@ -64,12 +63,6 @@ const NAV_ITEMS: NavItem[] = [
     roles: ['owner', 'staff'],
   },
   { to: '/trash', label: 'Trash', icon: Trash2, roles: ['owner'] },
-  {
-    to: '/settings',
-    label: 'Settings',
-    icon: Settings,
-    roles: ['owner', 'staff'],
-  },
 ]
 
 const DEPT_LABELS: Record<string, string> = {
