@@ -19,10 +19,9 @@ import {
   Dialog,
   DialogTrigger,
   DialogClose,
+  DialogPopup,
   DialogTitle,
   DialogDescription,
-  DialogBackdrop,
-  DialogPortal,
 } from '@/components/ui/dialog'
 import {
   DropdownMenu,
@@ -47,8 +46,6 @@ import {
   type PosUser,
 } from '@/shared/api/pos-users'
 import { toast } from 'sonner'
-import { cn } from '@/lib/utils'
-import { Dialog as DialogPrimitive } from '@base-ui/react/dialog'
 
 const DEPT_LABELS: Record<string, string> = {
   physical_dept: 'Physical',
@@ -75,31 +72,23 @@ export function SettingsDialog() {
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) closeSettings() }}>
-      <DialogPortal>
-        <DialogBackdrop />
-        <DialogPrimitive.Popup
-          data-slot="dialog-popup"
-          className={cn(
-            'fixed left-1/2 top-1/2 z-50 flex w-full max-w-3xl -translate-x-1/2 -translate-y-1/2 flex-col rounded-xl border bg-background shadow-lg duration-200 data-[open]:animate-in data-[open]:fade-in-0 data-[open]:zoom-in-95 data-[closed]:animate-out data-[closed]:fade-out-0 data-[closed]:zoom-out-95'
-          )}
-          style={{ maxHeight: '85vh' }}
-        >
-          {/* Header */}
-          <div className="flex shrink-0 items-center justify-between border-b px-6 py-4">
-            <div>
-              <DialogTitle className="text-lg font-semibold">Settings</DialogTitle>
-              <DialogDescription className="mt-0.5 text-sm text-muted-foreground">
-                Manage your POS preferences and configuration.
-              </DialogDescription>
-            </div>
-            <DialogClose className="inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-muted">
-              <X className="h-4 w-4" />
-            </DialogClose>
+      <DialogPopup className="flex max-h-[85vh] w-full max-w-3xl flex-col p-0">
+        {/* Header */}
+        <div className="flex shrink-0 items-center justify-between border-b px-6 py-4">
+          <div>
+            <DialogTitle className="text-lg font-semibold">Settings</DialogTitle>
+            <DialogDescription className="mt-0.5 text-sm text-muted-foreground">
+              Manage your POS preferences and configuration.
+            </DialogDescription>
           </div>
+          <DialogClose className="inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-muted">
+            <X className="h-4 w-4" />
+          </DialogClose>
+        </div>
 
-          {/* Body */}
-          <div className="flex-1 overflow-y-auto p-6">
-            <div className="space-y-4">
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto p-6">
+          <div className="space-y-4">
               {/* Account info */}
               <Card className="border-border/50">
                 <CardHeader>
@@ -146,8 +135,7 @@ export function SettingsDialog() {
               {role === 'owner' && <StaffManagementCard />}
             </div>
           </div>
-        </DialogPrimitive.Popup>
-      </DialogPortal>
+      </DialogPopup>
     </Dialog>
   )
 }
@@ -505,15 +493,10 @@ function UserFormDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       {trigger && <DialogTrigger render={trigger} />}
-      <DialogPortal>
-        <DialogBackdrop />
-        <DialogPrimitive.Popup
-          data-slot="dialog-popup"
-          className="fixed left-1/2 top-1/2 z-[60] w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-xl border bg-background p-6 shadow-lg duration-200 data-[open]:animate-in data-[open]:fade-in-0 data-[open]:zoom-in-95 data-[closed]:animate-out data-[closed]:fade-out-0 data-[closed]:zoom-out-95"
-        >
-          <DialogTitle>
-            {mode === 'create' ? 'Add User' : 'Edit User'}
-          </DialogTitle>
+      <DialogPopup className="z-[60]">
+        <DialogTitle>
+          {mode === 'create' ? 'Add User' : 'Edit User'}
+        </DialogTitle>
           <DialogDescription className="mt-1.5">
             {mode === 'create'
               ? 'Grant POS access to a new user by their Google email.'
@@ -601,8 +584,7 @@ function UserFormDialog({
               {mode === 'create' ? 'Add User' : 'Save Changes'}
             </Button>
           </div>
-        </DialogPrimitive.Popup>
-      </DialogPortal>
+      </DialogPopup>
     </Dialog>
   )
 }
@@ -634,13 +616,8 @@ function DeleteUserDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogPortal>
-        <DialogBackdrop />
-        <DialogPrimitive.Popup
-          data-slot="dialog-popup"
-          className="fixed left-1/2 top-1/2 z-[60] w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-xl border bg-background p-6 shadow-lg duration-200 data-[open]:animate-in data-[open]:fade-in-0 data-[open]:zoom-in-95 data-[closed]:animate-out data-[closed]:fade-out-0 data-[closed]:zoom-out-95"
-        >
-          <DialogTitle>Remove User</DialogTitle>
+      <DialogPopup className="z-[60]">
+        <DialogTitle>Remove User</DialogTitle>
           <DialogDescription className="mt-1.5">
             Are you sure you want to remove{' '}
             <span className="text-foreground font-medium">{user.email}</span>?
@@ -664,8 +641,7 @@ function DeleteUserDialog({
               Remove
             </Button>
           </div>
-        </DialogPrimitive.Popup>
-      </DialogPortal>
+      </DialogPopup>
     </Dialog>
   )
 }
