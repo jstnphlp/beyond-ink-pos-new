@@ -1,7 +1,6 @@
 import { SummaryCards } from './summary-cards'
 import { DashboardTabs } from './dashboard-tabs'
 import { WalletCards } from './wallet-cards'
-import { QuickWalletEntry } from './quick-entry'
 import { ExportButton } from './export-button'
 
 export function DashboardPage() {
@@ -17,7 +16,6 @@ export function DashboardPage() {
         </div>
         <div className="flex items-center gap-2">
           <ExportButton />
-          <QuickWalletEntry />
         </div>
       </div>
 

@@ -34,7 +34,7 @@ function mapMaterial(row: Record<string, unknown>): CatalogMaterial {
     id: row.id as string,
     name: row.name as string,
     unit: (row.unit as string) ?? '',
-    sellingPrice: Number(row.selling_price ?? 0),
+    costPerUnit: Number(row.cost_per_unit ?? 0),
     stockOnHand: Number(row.stock_on_hand ?? 0),
     isActive: true,
   }
@@ -62,7 +62,7 @@ export async function getCatalog(): Promise<CatalogData> {
       .order('name'),
     supabase
       .from('inventory_items')
-      .select('id, name, unit, selling_price, stock_on_hand')
+      .select('id, name, unit, cost_per_unit, stock_on_hand')
       .eq('is_active', true)
       .order('name'),
     supabase
@@ -175,7 +175,7 @@ export async function deleteCategory(id: string) {
 export async function createMaterial(data: {
   name: string
   unit: string
-  sellingPrice: number
+  costPerUnit: number
   stockOnHand: number
 }): Promise<string> {
   const { data: row, error } = await supabase
@@ -183,7 +183,7 @@ export async function createMaterial(data: {
     .insert({
       name: data.name,
       unit: data.unit,
-      selling_price: data.sellingPrice,
+      cost_per_unit: data.costPerUnit,
       stock_on_hand: data.stockOnHand,
     })
     .select('id')
@@ -197,7 +197,7 @@ export async function updateMaterial(
   data: Partial<{
     name: string
     unit: string
-    sellingPrice: number
+    costPerUnit: number
     stockOnHand: number
     isActive: boolean
   }>
@@ -205,7 +205,7 @@ export async function updateMaterial(
   const update: Record<string, unknown> = {}
   if (data.name !== undefined) update.name = data.name
   if (data.unit !== undefined) update.unit = data.unit
-  if (data.sellingPrice !== undefined) update.selling_price = data.sellingPrice
+  if (data.costPerUnit !== undefined) update.cost_per_unit = data.costPerUnit
   if (data.stockOnHand !== undefined) update.stock_on_hand = data.stockOnHand
   if (data.isActive !== undefined) update.is_active = data.isActive
   const { error } = await supabase
@@ -241,7 +241,7 @@ export async function setServiceMaterials(
     }))
     const { error: insError } = await supabase
       .from('service_material_prices')
-      .insert(rows)
+      .upsert(rows, { onConflict: 'service_id,inventory_item_id', ignoreDuplicates: true })
     if (insError) throw insError
   }
 }
@@ -264,7 +264,7 @@ export async function setMaterialServices(
     }))
     const { error: insError } = await supabase
       .from('service_material_prices')
-      .insert(rows)
+      .upsert(rows, { onConflict: 'service_id,inventory_item_id', ignoreDuplicates: true })
     if (insError) throw insError
   }
 }

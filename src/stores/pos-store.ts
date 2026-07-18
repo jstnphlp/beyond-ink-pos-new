@@ -27,14 +27,14 @@ export interface Service {
 export interface MaterialOption {
   id: string
   name: string
-  pricePerUnit: number
+  costPerUnit: number
   unit: string
   stockLevel: 'normal' | 'low' | 'out'
 }
 
 export interface SelectedService {
   service: Service
-  materialId: string | null
+  materialIds: string[]
   quantity: number
   customMaterialPrice: number | null
 }
@@ -132,59 +132,59 @@ export const SERVICES: Service[] = [
 
 export const MATERIALS: MaterialOption[] = [
   // Standard Printing — B&W
-  { id: 'c0000000-0000-0000-0000-000000000001', name: 'Bond Paper (Short) B&W', pricePerUnit: 4, unit: 'sheet', stockLevel: 'normal' },
-  { id: 'c0000000-0000-0000-0000-000000000002', name: 'Bond Paper (A4) B&W', pricePerUnit: 4, unit: 'sheet', stockLevel: 'normal' },
-  { id: 'c0000000-0000-0000-0000-000000000003', name: 'Bond Paper (Long) B&W', pricePerUnit: 5, unit: 'sheet', stockLevel: 'normal' },
+  { id: 'c0000000-0000-0000-0000-000000000001', name: 'Bond Paper (Short) B&W', costPerUnit: 4, unit: 'sheet', stockLevel: 'normal' },
+  { id: 'c0000000-0000-0000-0000-000000000002', name: 'Bond Paper (A4) B&W', costPerUnit: 4, unit: 'sheet', stockLevel: 'normal' },
+  { id: 'c0000000-0000-0000-0000-000000000003', name: 'Bond Paper (Long) B&W', costPerUnit: 5, unit: 'sheet', stockLevel: 'normal' },
   // Standard Printing — Colored
-  { id: 'c0000000-0000-0000-0000-000000000060', name: 'Bond Paper (Short) Colored', pricePerUnit: 7, unit: 'sheet', stockLevel: 'normal' },
-  { id: 'c0000000-0000-0000-0000-000000000061', name: 'Bond Paper (A4) Colored', pricePerUnit: 7, unit: 'sheet', stockLevel: 'normal' },
-  { id: 'c0000000-0000-0000-0000-000000000062', name: 'Bond Paper (Long) Colored', pricePerUnit: 8, unit: 'sheet', stockLevel: 'normal' },
+  { id: 'c0000000-0000-0000-0000-000000000060', name: 'Bond Paper (Short) Colored', costPerUnit: 7, unit: 'sheet', stockLevel: 'normal' },
+  { id: 'c0000000-0000-0000-0000-000000000061', name: 'Bond Paper (A4) Colored', costPerUnit: 7, unit: 'sheet', stockLevel: 'normal' },
+  { id: 'c0000000-0000-0000-0000-000000000062', name: 'Bond Paper (Long) Colored', costPerUnit: 8, unit: 'sheet', stockLevel: 'normal' },
   // Scanning / Digital
-  { id: 'c0000000-0000-0000-0000-000000000005', name: 'Digital Output', pricePerUnit: 10, unit: 'service', stockLevel: 'normal' },
-  { id: 'c0000000-0000-0000-0000-000000000006', name: 'Digital Output (Editing)', pricePerUnit: 20, unit: 'service', stockLevel: 'normal' },
+  { id: 'c0000000-0000-0000-0000-000000000005', name: 'Digital Output', costPerUnit: 10, unit: 'service', stockLevel: 'normal' },
+  { id: 'c0000000-0000-0000-0000-000000000006', name: 'Digital Output (Editing)', costPerUnit: 20, unit: 'service', stockLevel: 'normal' },
   // Photo Printing
-  { id: 'c0000000-0000-0000-0000-000000000063', name: 'Photo Paper (2R)', pricePerUnit: 8, unit: 'sheet', stockLevel: 'normal' },
-  { id: 'c0000000-0000-0000-0000-000000000010', name: 'Photo Paper (3R)', pricePerUnit: 15, unit: 'sheet', stockLevel: 'normal' },
-  { id: 'c0000000-0000-0000-0000-000000000011', name: 'Photo Paper (4R)', pricePerUnit: 20, unit: 'sheet', stockLevel: 'normal' },
-  { id: 'c0000000-0000-0000-0000-000000000064', name: 'Photo Paper (4R) Rush ID', pricePerUnit: 50, unit: 'sheet', stockLevel: 'normal' },
-  { id: 'c0000000-0000-0000-0000-000000000012', name: 'Photo Paper (A4)', pricePerUnit: 50, unit: 'sheet', stockLevel: 'normal' },
-  { id: 'c0000000-0000-0000-0000-000000000065', name: 'Double Sided Glossy Photo (A4)', pricePerUnit: 60, unit: 'sheet', stockLevel: 'normal' },
+  { id: 'c0000000-0000-0000-0000-000000000063', name: 'Photo Paper (2R)', costPerUnit: 8, unit: 'sheet', stockLevel: 'normal' },
+  { id: 'c0000000-0000-0000-0000-000000000010', name: 'Photo Paper (3R)', costPerUnit: 15, unit: 'sheet', stockLevel: 'normal' },
+  { id: 'c0000000-0000-0000-0000-000000000011', name: 'Photo Paper (4R)', costPerUnit: 20, unit: 'sheet', stockLevel: 'normal' },
+  { id: 'c0000000-0000-0000-0000-000000000064', name: 'Photo Paper (4R) Rush ID', costPerUnit: 50, unit: 'sheet', stockLevel: 'normal' },
+  { id: 'c0000000-0000-0000-0000-000000000012', name: 'Photo Paper (A4)', costPerUnit: 50, unit: 'sheet', stockLevel: 'normal' },
+  { id: 'c0000000-0000-0000-0000-000000000065', name: 'Double Sided Glossy Photo (A4)', costPerUnit: 60, unit: 'sheet', stockLevel: 'normal' },
   // Sticker Printing
-  { id: 'c0000000-0000-0000-0000-000000000024', name: 'Sticker (Glossy)', pricePerUnit: 45, unit: 'sheet', stockLevel: 'normal' },
-  { id: 'c0000000-0000-0000-0000-000000000023', name: 'Sticker (Matte)', pricePerUnit: 50, unit: 'sheet', stockLevel: 'normal' },
-  { id: 'c0000000-0000-0000-0000-000000000013', name: 'Vinyl Sticker (A4)', pricePerUnit: 50, unit: 'sheet', stockLevel: 'normal' },
+  { id: 'c0000000-0000-0000-0000-000000000024', name: 'Sticker (Glossy)', costPerUnit: 45, unit: 'sheet', stockLevel: 'normal' },
+  { id: 'c0000000-0000-0000-0000-000000000023', name: 'Sticker (Matte)', costPerUnit: 50, unit: 'sheet', stockLevel: 'normal' },
+  { id: 'c0000000-0000-0000-0000-000000000013', name: 'Vinyl Sticker (A4)', costPerUnit: 50, unit: 'sheet', stockLevel: 'normal' },
   // Sintra Board
-  { id: 'c0000000-0000-0000-0000-000000000014', name: 'Sintra Board', pricePerUnit: 150, unit: 'piece', stockLevel: 'normal' },
+  { id: 'c0000000-0000-0000-0000-000000000014', name: 'Sintra Board', costPerUnit: 150, unit: 'piece', stockLevel: 'normal' },
   // Business Cards
-  { id: 'c0000000-0000-0000-0000-000000000015', name: 'Cardstock', pricePerUnit: 50, unit: 'set', stockLevel: 'normal' },
+  { id: 'c0000000-0000-0000-0000-000000000015', name: 'Cardstock', costPerUnit: 50, unit: 'set', stockLevel: 'normal' },
   // Flyers
-  { id: 'c0000000-0000-0000-0000-000000000016', name: 'Brochure Paper (A4)', pricePerUnit: 25, unit: 'piece', stockLevel: 'normal' },
-  { id: 'c0000000-0000-0000-0000-000000000066', name: 'Inkjet Paper (A4)', pricePerUnit: 25, unit: 'piece', stockLevel: 'normal' },
+  { id: 'c0000000-0000-0000-0000-000000000016', name: 'Brochure Paper (A4)', costPerUnit: 25, unit: 'piece', stockLevel: 'normal' },
+  { id: 'c0000000-0000-0000-0000-000000000066', name: 'Inkjet Paper (A4)', costPerUnit: 25, unit: 'piece', stockLevel: 'normal' },
   // Certificates
-  { id: 'c0000000-0000-0000-0000-000000000017', name: 'Specialty Board (A4)', pricePerUnit: 25, unit: 'piece', stockLevel: 'normal' },
-  { id: 'c0000000-0000-0000-0000-000000000067', name: 'Parchment Paper (A4)', pricePerUnit: 15, unit: 'piece', stockLevel: 'normal' },
-  { id: 'c0000000-0000-0000-0000-000000000068', name: 'Linen Fino White (A4)', pricePerUnit: 20, unit: 'piece', stockLevel: 'normal' },
+  { id: 'c0000000-0000-0000-0000-000000000017', name: 'Specialty Board (A4)', costPerUnit: 25, unit: 'piece', stockLevel: 'normal' },
+  { id: 'c0000000-0000-0000-0000-000000000067', name: 'Parchment Paper (A4)', costPerUnit: 15, unit: 'piece', stockLevel: 'normal' },
+  { id: 'c0000000-0000-0000-0000-000000000068', name: 'Linen Fino White (A4)', costPerUnit: 20, unit: 'piece', stockLevel: 'normal' },
   // Invitation Card
-  { id: 'c0000000-0000-0000-0000-000000000069', name: 'Invitation Card Paper', pricePerUnit: 25, unit: 'piece', stockLevel: 'normal' },
+  { id: 'c0000000-0000-0000-0000-000000000069', name: 'Invitation Card Paper', costPerUnit: 25, unit: 'piece', stockLevel: 'normal' },
   // Hot Laminating
-  { id: 'c0000000-0000-0000-0000-000000000030', name: 'Hot Laminate Film (ID)', pricePerUnit: 20, unit: 'piece', stockLevel: 'normal' },
-  { id: 'c0000000-0000-0000-0000-000000000031', name: 'Hot Laminate Film (Half)', pricePerUnit: 35, unit: 'piece', stockLevel: 'normal' },
-  { id: 'c0000000-0000-0000-0000-000000000032', name: 'Hot Laminate Film (A4)', pricePerUnit: 50, unit: 'piece', stockLevel: 'normal' },
+  { id: 'c0000000-0000-0000-0000-000000000030', name: 'Hot Laminate Film (ID)', costPerUnit: 20, unit: 'piece', stockLevel: 'normal' },
+  { id: 'c0000000-0000-0000-0000-000000000031', name: 'Hot Laminate Film (Half)', costPerUnit: 35, unit: 'piece', stockLevel: 'normal' },
+  { id: 'c0000000-0000-0000-0000-000000000032', name: 'Hot Laminate Film (A4)', costPerUnit: 50, unit: 'piece', stockLevel: 'normal' },
   // Cold Laminating
-  { id: 'c0000000-0000-0000-0000-000000000070', name: 'Cold Laminating Film (A4)', pricePerUnit: 25, unit: 'piece', stockLevel: 'normal' },
+  { id: 'c0000000-0000-0000-0000-000000000070', name: 'Cold Laminating Film (A4)', costPerUnit: 25, unit: 'piece', stockLevel: 'normal' },
   // Magazine
-  { id: 'c0000000-0000-0000-0000-000000000040', name: 'C2S Magazine Paper (A4)', pricePerUnit: 35, unit: 'page', stockLevel: 'normal' },
-  { id: 'c0000000-0000-0000-0000-000000000042', name: 'C2S Magazine Paper (A5)', pricePerUnit: 15, unit: 'page', stockLevel: 'normal' },
+  { id: 'c0000000-0000-0000-0000-000000000040', name: 'C2S Magazine Paper (A4)', costPerUnit: 35, unit: 'page', stockLevel: 'normal' },
+  { id: 'c0000000-0000-0000-0000-000000000042', name: 'C2S Magazine Paper (A5)', costPerUnit: 15, unit: 'page', stockLevel: 'normal' },
   // Book Binding
-  { id: 'c0000000-0000-0000-0000-000000000050', name: 'Spiral/Coil', pricePerUnit: 50, unit: 'book', stockLevel: 'normal' },
-  { id: 'c0000000-0000-0000-0000-000000000051', name: 'Tape Binding', pricePerUnit: 40, unit: 'book', stockLevel: 'normal' },
-  { id: 'c0000000-0000-0000-0000-000000000052', name: 'Saddle-Stitch', pricePerUnit: 30, unit: 'book', stockLevel: 'normal' },
-  { id: 'c0000000-0000-0000-0000-000000000053', name: 'Hard Cover', pricePerUnit: 250, unit: 'book', stockLevel: 'normal' },
-  { id: 'c0000000-0000-0000-0000-000000000054', name: 'Staple Binding', pricePerUnit: 100, unit: 'book', stockLevel: 'normal' },
+  { id: 'c0000000-0000-0000-0000-000000000050', name: 'Spiral/Coil', costPerUnit: 50, unit: 'book', stockLevel: 'normal' },
+  { id: 'c0000000-0000-0000-0000-000000000051', name: 'Tape Binding', costPerUnit: 40, unit: 'book', stockLevel: 'normal' },
+  { id: 'c0000000-0000-0000-0000-000000000052', name: 'Saddle-Stitch', costPerUnit: 30, unit: 'book', stockLevel: 'normal' },
+  { id: 'c0000000-0000-0000-0000-000000000053', name: 'Hard Cover', costPerUnit: 250, unit: 'book', stockLevel: 'normal' },
+  { id: 'c0000000-0000-0000-0000-000000000054', name: 'Staple Binding', costPerUnit: 100, unit: 'book', stockLevel: 'normal' },
   // Specialty
-  { id: 'c0000000-0000-0000-0000-000000000071', name: 'Holographic Rainbow', pricePerUnit: 35, unit: 'sheet', stockLevel: 'normal' },
-  { id: 'c0000000-0000-0000-0000-000000000072', name: 'Matte Paper Double Sided', pricePerUnit: 35, unit: 'sheet', stockLevel: 'normal' },
-  { id: 'c0000000-0000-0000-0000-000000000073', name: 'Gray Board', pricePerUnit: 30, unit: 'sheet', stockLevel: 'normal' },
+  { id: 'c0000000-0000-0000-0000-000000000071', name: 'Holographic Rainbow', costPerUnit: 35, unit: 'sheet', stockLevel: 'normal' },
+  { id: 'c0000000-0000-0000-0000-000000000072', name: 'Matte Paper Double Sided', costPerUnit: 35, unit: 'sheet', stockLevel: 'normal' },
+  { id: 'c0000000-0000-0000-0000-000000000073', name: 'Gray Board', costPerUnit: 30, unit: 'sheet', stockLevel: 'normal' },
 ]
 
 export const SERVICE_MATERIAL_MAP: Record<string, string[]> = {
@@ -273,7 +273,7 @@ export function resolveMaterials(catalog: CatalogData | null): MaterialOption[] 
   return catalog.materials.map((m) => ({
     id: m.id,
     name: m.name,
-    pricePerUnit: m.sellingPrice,
+    costPerUnit: m.costPerUnit,
     unit: m.unit,
     stockLevel: m.stockOnHand <= 0 ? 'out' as const : m.stockOnHand <= 10 ? 'low' as const : 'normal' as const,
   }))
@@ -383,6 +383,9 @@ export const usePosStore = create<PosState>((set, get) => ({
         selectedCategoryIds: exists
           ? s.selectedCategoryIds.filter((cid) => cid !== id)
           : [...s.selectedCategoryIds, id],
+        selectedServices: exists
+          ? s.selectedServices.filter((ss) => ss.service.categoryId !== id)
+          : s.selectedServices,
       }
     }),
 
@@ -394,19 +397,25 @@ export const usePosStore = create<PosState>((set, get) => ({
       if (exists) {
         return { selectedServices: s.selectedServices.filter((ss) => ss.service.id !== service.id) }
       }
-      const isDesignDev = service.department === 'Design' || service.department === 'Dev'
       return {
         selectedServices: [
           ...s.selectedServices,
-          { service, materialId: null, quantity: 1, customMaterialPrice: isDesignDev ? service.basePrice : null },
+          { service, materialIds: [], quantity: 1, customMaterialPrice: null },
         ],
       }
     }),
   updateServiceMaterial: (serviceId, materialId) =>
     set((s) => ({
-      selectedServices: s.selectedServices.map((ss) =>
-        ss.service.id === serviceId ? { ...ss, materialId, customMaterialPrice: null } : ss
-      ),
+      selectedServices: s.selectedServices.map((ss) => {
+        if (ss.service.id !== serviceId) return ss
+        const exists = ss.materialIds.includes(materialId)
+        return {
+          ...ss,
+          materialIds: exists
+            ? ss.materialIds.filter((id) => id !== materialId)
+            : [...ss.materialIds, materialId],
+        }
+      }),
     })),
   updateServiceMaterialPrice: (serviceId, price) =>
     set((s) => ({
@@ -445,18 +454,9 @@ export const usePosStore = create<PosState>((set, get) => ({
 
   // Computed
   getSubtotal: () => {
-    const { selectedServices, catalog } = get()
-    const materials = resolveMaterials(catalog)
+    const { selectedServices } = get()
     return selectedServices.reduce((total, ss) => {
-      const isDesignDev = ss.service.department === 'Design' || ss.service.department === 'Dev'
-      if (isDesignDev) {
-        const unitPrice = ss.customMaterialPrice ?? ss.service.basePrice
-        return total + unitPrice * ss.quantity
-      }
-      if (!ss.materialId) return total
-      const mat = materials.find((m) => m.id === ss.materialId)
-      if (!mat) return total
-      const unitPrice = ss.customMaterialPrice ?? mat.pricePerUnit
+      const unitPrice = ss.customMaterialPrice ?? ss.service.basePrice
       return total + unitPrice * ss.quantity
     }, 0)
   },
@@ -512,8 +512,10 @@ export const usePosStore = create<PosState>((set, get) => ({
   draftName: '',
   setCurrentDraftId: (id) => set({ currentDraftId: id }),
   loadDraft: (id, payload) => {
-    const services = (payload.selectedServices ?? []).map((s) => ({
-      ...s,
+    const services = (payload.selectedServices ?? []).map((s: any) => ({
+      service: s.service,
+      materialIds: s.materialIds ?? (s.materialId ? [s.materialId] : []),
+      quantity: s.quantity,
       customMaterialPrice: s.customMaterialPrice ?? null,
     }))
     set({
