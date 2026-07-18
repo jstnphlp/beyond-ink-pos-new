@@ -383,6 +383,9 @@ export const usePosStore = create<PosState>((set, get) => ({
         selectedCategoryIds: exists
           ? s.selectedCategoryIds.filter((cid) => cid !== id)
           : [...s.selectedCategoryIds, id],
+        selectedServices: exists
+          ? s.selectedServices.filter((ss) => ss.service.categoryId !== id)
+          : s.selectedServices,
       }
     }),
 
