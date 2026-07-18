@@ -69,7 +69,7 @@ LANGUAGE plpgsql
 AS $$
 BEGIN
   UPDATE public.staff_sessions
-  SET time_out = (CURRENT_DATE AT TIME ZONE 'Asia/Manila' + TIME '21:00:00') AT TIME ZONE 'Asia/Manila',
+  SET time_out = (CURRENT_DATE + TIME '21:00:00') AT TIME ZONE 'Asia/Manila',
       auto_logged_out = true
   WHERE time_out IS NULL;
 END;

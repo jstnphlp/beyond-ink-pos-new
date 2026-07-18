@@ -73,7 +73,7 @@ function BalanceCard({
 
   const hasOverride = overrideAmount !== null
   const displayAmount = hasOverride
-    ? overrideAmount + salesAfterOverride
+    ? overrideAmount + salesAfterOverride + entriesNet
     : computedAmount + entriesNet
 
   const colorClasses = {

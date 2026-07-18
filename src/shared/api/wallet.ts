@@ -112,10 +112,10 @@ export async function fetchWalletSummary(): Promise<WalletSummary> {
   }
 
   const cashTotal = cashOverride !== null
-    ? cashOverride + cashSalesAfterOverride
+    ? cashOverride + cashSalesAfterOverride + cashEntriesNet
     : cashSalesTotal + cashEntriesNet
   const gcashTotal = gcashOverride !== null
-    ? gcashOverride + gcashSalesAfterOverride
+    ? gcashOverride + gcashSalesAfterOverride + gcashEntriesNet
     : gcashSalesTotal + gcashEntriesNet
 
   return {
