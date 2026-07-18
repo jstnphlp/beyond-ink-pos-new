@@ -8,6 +8,7 @@ import { useSettingsStore } from '@/stores/settings-store'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
 import { SidebarContent } from './sidebar'
 import { useIsMobile } from '@/shared/hooks/use-is-mobile'
+import { QuickWalletEntry } from '@/pages/dashboard/quick-entry'
 
 const DEPARTMENT_COLORS: Record<string, string> = {
   Physical:
@@ -88,6 +89,7 @@ export function Header() {
       <div className="flex items-center gap-3 md:gap-5">
         {/* Clock */}
         <div className="hidden items-center gap-4 md:flex">
+          <QuickWalletEntry />
           <div className="flex items-center gap-1.5 text-muted-foreground">
             <Calendar className="h-3.5 w-3.5" />
             <span className="text-xs font-medium">{dateStr}</span>
