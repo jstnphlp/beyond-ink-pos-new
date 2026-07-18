@@ -61,7 +61,7 @@ interface CatalogMaterial {
   id: string
   name: string
   unit: string
-  sellingPrice: number
+  costPerUnit: number
   stockOnHand: number
   isActive: boolean
 }
@@ -748,8 +748,8 @@ function MaterialFormDialog({
   const [open, setOpen] = useState(false)
   const [name, setName] = useState(material?.name ?? '')
   const [unit, setUnit] = useState(material?.unit ?? '')
-  const [sellingPrice, setSellingPrice] = useState(
-    material?.sellingPrice?.toString() ?? ''
+  const [costPerUnit, setCostPerUnit] = useState(
+    material?.costPerUnit?.toString() ?? ''
   )
   const [stockOnHand, setStockOnHand] = useState(
     material?.stockOnHand?.toString() ?? ''
@@ -770,7 +770,7 @@ function MaterialFormDialog({
     e.preventDefault()
     if (!name.trim()) return
 
-    const price = parseFloat(sellingPrice) || 0
+    const price = parseFloat(costPerUnit) || 0
     const stock = parseInt(stockOnHand, 10) || 0
 
     function afterSave(itemId: string) {
@@ -787,7 +787,7 @@ function MaterialFormDialog({
           data: {
             name: name.trim(),
             unit: unit.trim(),
-            sellingPrice: price,
+            costPerUnit: price,
             stockOnHand: stock,
           },
         },
@@ -798,14 +798,14 @@ function MaterialFormDialog({
         {
           name: name.trim(),
           unit: unit.trim(),
-          sellingPrice: price,
+          costPerUnit: price,
           stockOnHand: stock,
         },
         {
           onSuccess: (itemId) => {
             setName('')
             setUnit('')
-            setSellingPrice('')
+            setCostPerUnit('')
             setStockOnHand('')
             setLinkedServiceIds([])
             afterSave(itemId)
@@ -821,7 +821,7 @@ function MaterialFormDialog({
       if (material) {
         setName(material.name)
         setUnit(material.unit)
-        setSellingPrice(material.sellingPrice.toString())
+        setCostPerUnit(material.costPerUnit.toString())
         setStockOnHand(material.stockOnHand.toString())
         setLinkedServiceIds(
           serviceMaterialLinks
@@ -831,7 +831,7 @@ function MaterialFormDialog({
       } else {
         setName('')
         setUnit('')
-        setSellingPrice('')
+        setCostPerUnit('')
         setStockOnHand('')
         setLinkedServiceIds([])
       }
@@ -878,14 +878,14 @@ function MaterialFormDialog({
           </label>
           <label className="flex flex-col gap-1.5">
             <span className="text-muted-foreground text-xs font-medium">
-              Selling Price (₱)
+              Cost Price (₱)
             </span>
             <Input
               type="number"
               min="0"
               step="0.01"
-              value={sellingPrice}
-              onChange={(e) => setSellingPrice(e.target.value)}
+              value={costPerUnit}
+              onChange={(e) => setCostPerUnit(e.target.value)}
               placeholder="0.00"
               required
             />
@@ -1023,7 +1023,7 @@ function MaterialsPanel({
                 <tr className="border-border/50 text-muted-foreground border-b text-left text-xs">
                   <th className="pr-4 pb-2 font-medium">Name</th>
                   <th className="pr-4 pb-2 font-medium">Unit</th>
-                  <th className="pr-4 pb-2 font-medium">Selling Price</th>
+                  <th className="pr-4 pb-2 font-medium">Cost Price</th>
                   <th className="pr-4 pb-2 font-medium">Stock</th>
                   <th className="pr-4 pb-2 font-medium">Status</th>
                   <th className="pb-2 text-right font-medium">Actions</th>
@@ -1037,7 +1037,7 @@ function MaterialsPanel({
                       {mat.unit || '—'}
                     </td>
                     <td className="py-2.5 pr-4 tabular-nums">
-                      {formatCurrency(mat.sellingPrice)}
+                      {formatCurrency(mat.costPerUnit)}
                     </td>
                     <td className="py-2.5 pr-4 tabular-nums">
                       {mat.stockOnHand}

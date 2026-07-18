@@ -241,17 +241,12 @@ export function OrderSummary() {
         ) : (
           <div className="space-y-0 divide-y divide-border/40 py-3">
             {selectedServices.map((ss) => {
-              const isDesignDev = ss.service.department === 'Design' || ss.service.department === 'Dev'
-              const material = !isDesignDev && ss.materialId
-                ? materials.find((m) => m.id === ss.materialId)
-                : null
+              const selectedMats = ss.materialIds
+                .map((id) => materials.find((m) => m.id === id))
+                .filter(Boolean)
 
-              const unitPrice = isDesignDev
-                ? (ss.customMaterialPrice ?? ss.service.basePrice)
-                : material
-                  ? (ss.customMaterialPrice ?? material.pricePerUnit)
-                  : null
-              const lineTotal = unitPrice !== null ? unitPrice * ss.quantity : null
+              const unitPrice = ss.customMaterialPrice ?? ss.service.basePrice
+              const lineTotal = unitPrice * ss.quantity
 
               return (
                 <div key={ss.service.id} className="py-3">
@@ -261,25 +256,23 @@ export function OrderSummary() {
                       <p className="text-sm font-medium">
                         {ss.service.name}
                       </p>
-                      {unitPrice !== null && (
-                        <p className="text-[11px] text-muted-foreground">
-                          ₱{unitPrice.toLocaleString()}{material ? `/${material.unit}` : ''} × {ss.quantity}
-                        </p>
-                      )}
+                      <p className="text-[11px] text-muted-foreground">
+                        ₱{unitPrice.toLocaleString()} × {ss.quantity}
+                      </p>
                     </div>
-                    {lineTotal !== null && (
-                      <span className="ml-3 text-sm font-semibold tabular-nums">
-                        ₱{lineTotal.toLocaleString()}
-                      </span>
-                    )}
+                    <span className="ml-3 text-sm font-semibold tabular-nums">
+                      ₱{lineTotal.toLocaleString()}
+                    </span>
                   </div>
 
-                  {/* Material */}
-                  {material && (
-                    <div className="mt-1.5 flex items-center justify-between pl-3">
-                      <p className="text-[11px] text-muted-foreground">
-                        {material.name}
-                      </p>
+                  {/* Materials */}
+                  {selectedMats.length > 0 && (
+                    <div className="mt-1.5 space-y-0.5 pl-3">
+                      {selectedMats.map((mat) => (
+                        <p key={mat!.id} className="text-[11px] text-muted-foreground">
+                          {mat!.name}
+                        </p>
+                      ))}
                     </div>
                   )}
                 </div>

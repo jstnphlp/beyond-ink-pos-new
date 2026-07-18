@@ -20,7 +20,7 @@ export interface CatalogMaterial {
   id: string
   name: string
   unit: string
-  sellingPrice: number
+  costPerUnit: number
   stockOnHand: number
   isActive: boolean
 }

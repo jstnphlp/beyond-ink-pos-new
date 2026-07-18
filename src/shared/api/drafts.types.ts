@@ -5,7 +5,8 @@ export interface DraftPayload {
   currentStep: number
   selectedServices: Array<{
     service: Service
-    materialId: string | null
+    materialIds?: string[]
+    materialId?: string | null
     quantity: number
     customMaterialPrice?: number | null
   }>

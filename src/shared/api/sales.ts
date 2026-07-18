@@ -67,24 +67,21 @@ export async function completeSale(params: CompleteSaleParams) {
     paymentMethod === 'cash' ? Math.max(0, cashReceived - total) : 0
 
   const services = selectedServices.map((ss, i) => {
-    const isDesignDev = ss.service.department === 'Design' || ss.service.department === 'Dev'
-    const material = !isDesignDev && ss.materialId
-      ? materials.find((m) => m.id === ss.materialId)
-      : null
-    const unitPrice = isDesignDev
-      ? (ss.customMaterialPrice ?? ss.service.basePrice)
-      : material
-        ? (ss.customMaterialPrice ?? material.pricePerUnit)
-        : null
+    const unitPrice = ss.customMaterialPrice ?? ss.service.basePrice
+    const selectedMats = ss.materialIds
+      .map((id) => materials.find((m) => m.id === id))
+      .filter(Boolean)
     return {
       serviceId: resolveId(ss.service.id),
       serviceName: ss.service.name,
       quantity: ss.quantity,
       sortOrder: i,
       unitPrice,
-      material: material
-        ? { id: material.id, name: material.name, pricePerUnit: material.pricePerUnit }
-        : null,
+      materials: selectedMats.map((mat) => ({
+        id: mat!.id,
+        name: mat!.name,
+        costPerUnit: mat!.costPerUnit,
+      })),
     }
   })
 
