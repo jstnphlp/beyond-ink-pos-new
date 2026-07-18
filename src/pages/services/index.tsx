@@ -353,6 +353,8 @@ function CategoriesPanel({
   categories: CatalogCategory[]
   isLoading: boolean
 }) {
+  const [search, setSearch] = useState('')
+
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -362,31 +364,45 @@ function CategoriesPanel({
     )
   }
 
+  const filtered = search
+    ? categories.filter((c) => c.name.toLowerCase().includes(search.toLowerCase()))
+    : categories
+
   const grouped = DEPT_ORDER.map((dept) => ({
     department: dept,
-    categories: categories.filter((c) => c.department === dept),
+    categories: filtered.filter((c) => c.department === dept),
   })).filter((g) => g.categories.length > 0)
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="text-muted-foreground text-sm">
-          {categories.length} categories across {grouped.length} department
-          {grouped.length !== 1 ? 's' : ''}
-        </p>
-        <CategoryFormDialog
-          trigger={
-            <Button size="sm" className="gap-1.5">
-              <Plus className="h-3.5 w-3.5" />
-              Add Category
-            </Button>
-          }
-        />
+      <div className="flex items-center justify-between gap-3">
+        <div className="relative flex-1 max-w-xs">
+          <Search className="text-muted-foreground absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search categories..."
+            className="h-8 pl-8 text-sm"
+          />
+        </div>
+        <div className="flex items-center gap-3">
+          <p className="text-muted-foreground text-sm whitespace-nowrap">
+            {filtered.length} {search ? 'found' : `categor${filtered.length !== 1 ? 'ies' : 'y'}`}
+          </p>
+          <CategoryFormDialog
+            trigger={
+              <Button size="sm" className="gap-1.5">
+                <Plus className="h-3.5 w-3.5" />
+                Add Category
+              </Button>
+            }
+          />
+        </div>
       </div>
 
       {grouped.length === 0 ? (
         <p className="text-muted-foreground py-12 text-center text-sm">
-          No categories yet. Add your first category to get started.
+          {search ? 'No categories match your search.' : 'No categories yet. Add your first category to get started.'}
         </p>
       ) : (
         grouped.map((g) => (
@@ -678,6 +694,8 @@ function ServicesPanel({
   isLoading: boolean
 }) {
   const [addOpen, setAddOpen] = useState(false)
+  const [search, setSearch] = useState('')
+
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -687,11 +705,15 @@ function ServicesPanel({
     )
   }
 
+  const filtered = search
+    ? services.filter((s) => s.name.toLowerCase().includes(search.toLowerCase()))
+    : services
+
   const catMap = new Map(categories.map((c) => [c.id, c]))
   const grouped = DEPT_ORDER.map((dept) => ({
     department: dept,
     categories: categories.filter((c) => c.department === dept),
-    services: services.filter((s) => {
+    services: filtered.filter((s) => {
       const cat = catMap.get(s.categoryId)
       return cat?.department === dept
     }),
@@ -699,24 +721,35 @@ function ServicesPanel({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="text-muted-foreground text-sm">
-          {services.length} services across {categories.length} categories
-        </p>
-        <ServiceFormDialog
-          categories={categories}
-          open={addOpen}
-          onOpenChange={setAddOpen}
-        />
-        <Button size="sm" className="gap-1.5" onClick={() => setAddOpen(true)}>
-          <Plus className="h-3.5 w-3.5" />
-          Add Service
-        </Button>
+      <div className="flex items-center justify-between gap-3">
+        <div className="relative flex-1 max-w-xs">
+          <Search className="text-muted-foreground absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search services..."
+            className="h-8 pl-8 text-sm"
+          />
+        </div>
+        <div className="flex items-center gap-3">
+          <p className="text-muted-foreground text-sm whitespace-nowrap">
+            {filtered.length} {search ? 'found' : `service${filtered.length !== 1 ? 's' : ''}`}
+          </p>
+          <ServiceFormDialog
+            categories={categories}
+            open={addOpen}
+            onOpenChange={setAddOpen}
+          />
+          <Button size="sm" className="gap-1.5" onClick={() => setAddOpen(true)}>
+            <Plus className="h-3.5 w-3.5" />
+            Add Service
+          </Button>
+        </div>
       </div>
 
       {grouped.length === 0 ? (
         <p className="text-muted-foreground py-12 text-center text-sm">
-          No services yet. Add your first service to get started.
+          {search ? 'No services match your search.' : 'No services yet. Add your first service to get started.'}
         </p>
       ) : (
         grouped.map((g) => (
@@ -980,6 +1013,7 @@ function MaterialsPanel({
   isLoading: boolean
 }) {
   const deleteMutation = useDeleteMaterial()
+  const [search, setSearch] = useState('')
 
   if (isLoading) {
     return (
@@ -991,30 +1025,48 @@ function MaterialsPanel({
     )
   }
 
+  const filtered = search
+    ? materials.filter((m) => m.name.toLowerCase().includes(search.toLowerCase()))
+    : materials
+
   return (
     <Card className="border-border/50">
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-3">
           <CardTitle className="flex items-center gap-2 text-base">
             <Package className="text-brand h-4 w-4" />
             Materials
           </CardTitle>
-          <MaterialFormDialog
-            services={services}
-            serviceMaterialLinks={serviceMaterialLinks}
-            trigger={
-              <Button size="sm" className="gap-1.5">
-                <Plus className="h-3.5 w-3.5" />
-                Add Material
-              </Button>
-            }
-          />
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <Search className="text-muted-foreground absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search materials..."
+                className="h-8 w-48 pl-8 text-sm"
+              />
+            </div>
+            <p className="text-muted-foreground text-sm whitespace-nowrap">
+              {filtered.length} {search ? 'found' : `material${filtered.length !== 1 ? 's' : ''}`}
+            </p>
+            <MaterialFormDialog
+              services={services}
+              serviceMaterialLinks={serviceMaterialLinks}
+              trigger={
+                <Button size="sm" className="gap-1.5">
+                  <Plus className="h-3.5 w-3.5" />
+                  Add Material
+                </Button>
+              }
+            />
+          </div>
         </div>
       </CardHeader>
       <CardContent>
-        {materials.length === 0 ? (
+        {filtered.length === 0 ? (
           <p className="text-muted-foreground py-6 text-center text-sm">
-            No materials yet. Add your first material or inventory item.
+            {search ? 'No materials match your search.' : 'No materials yet. Add your first material or inventory item.'}
           </p>
         ) : (
           <div className="overflow-x-auto">
@@ -1030,7 +1082,7 @@ function MaterialsPanel({
                 </tr>
               </thead>
               <tbody className="divide-border/30 divide-y">
-                {materials.map((mat) => (
+                {filtered.map((mat) => (
                   <tr key={mat.id}>
                     <td className="py-2.5 pr-4 font-medium">{mat.name}</td>
                     <td className="text-muted-foreground py-2.5 pr-4">
