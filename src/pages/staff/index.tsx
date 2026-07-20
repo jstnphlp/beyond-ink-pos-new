@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Users, LogIn, LogOut, History, Timer, UserCircle } from 'lucide-react'
+import { Users, LogIn, LogOut, History, Timer, UserCircle, Clock, MessageSquareText } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -20,6 +20,7 @@ import {
   useClockIn,
   useClockOut,
 } from '@/shared/hooks/use-staff'
+import type { StaffSession } from '@/shared/api/staff.types'
 import { useAuth } from '@/shared/hooks/use-auth'
 import { useStaffStore } from '@/stores/staff-store'
 
@@ -500,6 +501,102 @@ function ActiveSessionsPanel({
   )
 }
 
+// ─── Attendance Detail Dialog (Owner Only) ──────────────────────────────────
+
+function AttendanceDetailDialog({
+  session,
+  open,
+  onOpenChange,
+}: {
+  session: StaffSession
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}) {
+  const hours = session.timeOut ? calcHours(session.timeIn, session.timeOut) : null
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogPopup>
+        <DialogTitle>Attendance Detail</DialogTitle>
+        <DialogDescription className="mt-1.5">
+          Shift record for {session.staffName}
+        </DialogDescription>
+
+        <div className="mt-4 space-y-4">
+          {/* Hours Worked */}
+          <div className="flex items-center gap-3 rounded-lg border border-border/50 bg-muted/20 p-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500/10">
+              <Clock className="h-4 w-4 text-emerald-500" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Hours Worked</p>
+              <p className="text-lg font-bold tabular-nums">
+                {hours !== null ? `${hours.toFixed(2)} hours` : '—'}
+              </p>
+            </div>
+          </div>
+
+          {/* Shift Details */}
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <div>
+              <p className="text-xs text-muted-foreground">Date</p>
+              <p className="font-medium">{formatDate(session.timeIn)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Department</p>
+              <Badge
+                variant="outline"
+                className={`text-[10px] ${DEPT_BADGE_COLORS[session.department] ?? ''}`}
+              >
+                {DEPT_LABELS[session.department] ?? session.department}
+              </Badge>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Time In</p>
+              <p className="font-medium">{formatTime(session.timeIn)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Time Out</p>
+              <div className="flex items-center gap-1.5">
+                <p className="font-medium">
+                  {session.timeOut ? formatTime(session.timeOut) : '—'}
+                </p>
+                {session.autoLoggedOut && (
+                  <Badge
+                    variant="outline"
+                    className="border-destructive/30 bg-destructive/10 text-[10px] text-destructive"
+                  >
+                    auto
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Notes */}
+          <div>
+            <div className="mb-1.5 flex items-center gap-1.5">
+              <MessageSquareText className="h-3.5 w-3.5 text-muted-foreground" />
+              <p className="text-xs text-muted-foreground">Clock-Out Note</p>
+            </div>
+            <div className="rounded-lg border border-border/50 bg-muted/20 p-3">
+              <p className="text-sm whitespace-pre-wrap">
+                {session.note || 'No notes provided.'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-5 flex justify-end">
+          <DialogClose className="border-input bg-background hover:bg-accent hover:text-accent-foreground inline-flex items-center justify-center rounded-lg border px-4 py-2 text-sm font-medium transition-colors">
+            Close
+          </DialogClose>
+        </div>
+      </DialogPopup>
+    </Dialog>
+  )
+}
+
 // ─── Attendance Log ──────────────────────────────────────────────────────────
 
 function AttendanceLog({
@@ -517,6 +614,7 @@ function AttendanceLog({
   const [staffFilter, setStaffFilter] = useState<string>('all')
   const [deptFilter, setDeptFilter] = useState<string>(isOwner ? 'all' : userDepartment ?? 'all')
   const [appliedFilters, setAppliedFilters] = useState(attendanceFilters)
+  const [selectedSession, setSelectedSession] = useState<StaffSession | null>(null)
 
   const { data, isLoading, isFetching, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useAttendanceInfinite(appliedFilters)
@@ -657,7 +755,11 @@ function AttendanceLog({
                   return (
                     <tr
                       key={s.id}
-                      className={s.autoLoggedOut ? 'bg-destructive/5' : undefined}
+                      onClick={isOwner ? () => setSelectedSession(s) : undefined}
+                      className={[
+                        s.autoLoggedOut ? 'bg-destructive/5' : '',
+                        isOwner ? 'cursor-pointer hover:bg-muted/30 transition-colors' : '',
+                      ].filter(Boolean).join(' ') || undefined}
                     >
                       <td className="py-2.5 pr-4 text-muted-foreground">
                         {formatDate(s.timeIn)}
@@ -725,6 +827,16 @@ function AttendanceLog({
           </div>
         )}
       </CardContent>
+
+      {selectedSession && (
+        <AttendanceDetailDialog
+          session={selectedSession}
+          open={!!selectedSession}
+          onOpenChange={(open) => {
+            if (!open) setSelectedSession(null)
+          }}
+        />
+      )}
     </Card>
   )
 }
