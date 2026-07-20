@@ -9,7 +9,6 @@ import {
   Wallet,
   ChartPie,
   Wrench,
-  UserCog,
   DollarSign,
   Trash2,
 } from 'lucide-react'
@@ -55,7 +54,6 @@ const NAV_ITEMS: NavItem[] = [
     roles: ['owner', 'staff'],
     departments: ['physical_dept'],
   },
-  { to: '/staffs', label: 'Staffs', icon: UserCog, roles: ['owner'] },
   {
     to: '/staff',
     label: 'Staff Shifts',
