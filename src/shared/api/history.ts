@@ -152,7 +152,7 @@ export async function fetchTransactionDetail(
       quantity: lineQty > 1 ? lineQty : entryQty,
       unitPrice: linePrice,
       materials: lineEntries.map((entry) => ({
-        materialName: entry.material_name,
+        materialName: entry.material_name ?? '',
         quantity: Number(entry.quantity),
         unitPrice: Number(entry.unit_price),
       })),
