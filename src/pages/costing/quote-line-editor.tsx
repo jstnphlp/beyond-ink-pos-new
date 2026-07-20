@@ -153,7 +153,7 @@ export function QuoteLineEditor({
           <select
             value={selectedProfileId}
             onChange={(e) => setSelectedProfileId(e.target.value)}
-            className="border-input focus-visible:border-ring focus-visible:ring-ring/50 dark:bg-input/30 dark:text-foreground [&>option]:bg-popover [&>option]:text-popover-foreground h-8 rounded-lg border bg-transparent px-2.5 text-sm outline-none focus-visible:ring-3"
+            className="border-input focus-visible:border-ring focus-visible:ring-ring/50 h-8 rounded-lg border bg-popover px-2.5 text-sm outline-none focus-visible:ring-3"
           >
             <option value="">Select a cost profile...</option>
             {availableProfiles.map((p) => (

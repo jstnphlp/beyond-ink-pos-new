@@ -61,3 +61,13 @@ export interface TransactionDetail {
   createdAt: string
   serviceLines: TransactionServiceLine[]
 }
+
+export interface UpdateTransactionPayload {
+  customerName?: string | null
+  deliveryAddress?: string | null
+  deliveryFee?: number
+  discountType?: 'fixed' | 'percentage' | null
+  discountValue?: number | null
+  paymentMethod?: 'cash' | 'gcash' | null
+  status?: HistoryStatus
+}

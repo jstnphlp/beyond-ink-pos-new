@@ -1,7 +1,8 @@
 import { useState, useCallback, useMemo, useRef } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { fetchHistoryPage, fetchTransactionDetail } from '@/shared/api/history'
-import type { HistoryFilters, HistoryTransaction } from '@/shared/api/history.types'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
+import { fetchHistoryPage, fetchTransactionDetail, deleteTransaction, updateTransaction } from '@/shared/api/history'
+import type { HistoryFilters, HistoryTransaction, UpdateTransactionPayload } from '@/shared/api/history.types'
 
 const DEFAULT_FILTERS: HistoryFilters = {
   search: '',
@@ -110,5 +111,38 @@ export function useTransactionDetail(id: string | null) {
     queryFn: () => fetchTransactionDetail(id!),
     enabled: !!id,
     staleTime: 5 * 60_000,
+  })
+}
+
+export function useDeleteTransaction() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (id: string) => deleteTransaction(id),
+    onSuccess: () => {
+      toast.success('Transaction deleted')
+      queryClient.invalidateQueries({ queryKey: ['history'] })
+      queryClient.invalidateQueries({ queryKey: ['transaction-detail'] })
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || 'Failed to delete transaction')
+    },
+  })
+}
+
+export function useUpdateTransaction() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: UpdateTransactionPayload }) =>
+      updateTransaction(id, payload),
+    onSuccess: () => {
+      toast.success('Transaction updated')
+      queryClient.invalidateQueries({ queryKey: ['history'] })
+      queryClient.invalidateQueries({ queryKey: ['transaction-detail'] })
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || 'Failed to update transaction')
+    },
   })
 }

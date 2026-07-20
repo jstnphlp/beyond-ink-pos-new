@@ -374,7 +374,7 @@ function AddEntryDialog({
             <select
               value={showNewCategory ? CATEGORY_SELECT_VALUE : categoryId}
               onChange={(e) => handleCategoryChange(e.target.value)}
-              className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
+              className="h-8 w-full rounded-lg border border-input bg-popover px-2.5 text-sm"
             >
               <option value="">None</option>
               {categories.map((cat) => (
@@ -403,7 +403,7 @@ function AddEntryDialog({
             <select
               value={paymentMethod}
               onChange={(e) => setPaymentMethod(e.target.value as 'cash' | 'gcash')}
-              className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
+              className="h-8 w-full rounded-lg border border-input bg-popover px-2.5 text-sm"
             >
               <option value="cash">Cash</option>
               <option value="gcash">GCash</option>
@@ -515,7 +515,7 @@ function EntriesTable({
         <select
           value={filter}
           onChange={(e) => setFilter(e.target.value as 'all' | 'cash' | 'gcash')}
-          className="h-7 rounded-lg border border-input bg-transparent px-2 text-xs"
+          className="h-7 rounded-lg border border-input bg-popover px-2 text-xs"
         >
           <option value="all">All</option>
           <option value="cash">Cash</option>

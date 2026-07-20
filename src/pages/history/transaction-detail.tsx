@@ -1,13 +1,25 @@
+import { useState } from 'react'
 import {
   Dialog,
   DialogPopup,
   DialogTitle,
+  DialogDescription,
   DialogClose,
 } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useTransactionDetail } from './use-history-query'
-import { X, CreditCard, Banknote, MapPin, Tag, User } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu'
+import { useTransactionDetail, useDeleteTransaction } from './use-history-query'
+import { useAuth } from '@/shared/hooks/use-auth'
+import { EditTransactionDialog } from './edit-transaction-dialog'
+import { X, CreditCard, Banknote, MapPin, Tag, User, MoreVertical, Pencil, Trash2, AlertTriangle } from 'lucide-react'
+import type { TransactionDetail as TransactionDetailType } from '@/shared/api/history.types'
 
 const STATUS_STYLES: Record<string, string> = {
   completed: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25',
@@ -62,17 +74,50 @@ export function TransactionDetail({
   onClose: () => void
 }) {
   const { data: detail, isLoading } = useTransactionDetail(transactionId)
+  const { role } = useAuth()
+  const deleteMutation = useDeleteTransaction()
+  const [editingTxn, setEditingTxn] = useState<TransactionDetailType | null>(null)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+
+  const isOwner = role === 'owner'
+
+  const handleDelete = () => {
+    if (!detail) return
+    deleteMutation.mutate(detail.id, { onSuccess: () => { setShowDeleteConfirm(false); onClose() } })
+  }
 
   return (
+    <>
     <Dialog open={!!transactionId} onOpenChange={(open) => { if (!open) onClose() }}>
       <DialogPopup className="fixed right-0 top-0 h-full w-full max-w-md translate-x-0 translate-y-0 left-auto rounded-none border-l [&[data-open]]:!animate-none [&[data-closed]]:!animate-none">
         <div className="flex items-center justify-between">
           <DialogTitle>
             {detail ? `TXN-${detail.transactionNumber.slice(-4)}` : 'Transaction'}
           </DialogTitle>
-          <DialogClose className="inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-muted">
-            <X className="h-4 w-4" />
-          </DialogClose>
+          <div className="flex items-center gap-1">
+            {isOwner && detail && (
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-muted"
+                >
+                  <MoreVertical className="h-4 w-4" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setEditingTxn(detail)}>
+                    <Pencil className="h-4 w-4" />
+                    Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuItem variant="destructive" onClick={() => setShowDeleteConfirm(true)}>
+                    <Trash2 className="h-4 w-4" />
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+            <DialogClose className="inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-muted">
+              <X className="h-4 w-4" />
+            </DialogClose>
+          </div>
         </div>
 
         {isLoading || !detail ? (
@@ -236,5 +281,46 @@ export function TransactionDetail({
         )}
       </DialogPopup>
     </Dialog>
+
+    {editingTxn && (
+      <EditTransactionDialog
+        transaction={editingTxn}
+        onClose={() => setEditingTxn(null)}
+      />
+    )}
+
+    <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+      <DialogPopup className="max-w-sm">
+        <div className="flex items-start gap-3">
+          <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-destructive/10">
+            <AlertTriangle className="h-4.5 w-4.5 text-destructive" />
+          </div>
+          <div className="flex-1">
+            <DialogTitle>Delete Transaction</DialogTitle>
+            <DialogDescription className="mt-1.5">
+              Are you sure you want to delete{' '}
+              <span className="font-medium text-foreground">
+                TXN-{detail?.transactionNumber.slice(-4)}
+              </span>
+              ? This will remove the transaction and all its service lines. It can be restored from trash.
+            </DialogDescription>
+          </div>
+        </div>
+        <div className="mt-5 flex justify-end gap-2">
+          <Button variant="outline" size="sm" onClick={() => setShowDeleteConfirm(false)}>
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={handleDelete}
+            disabled={deleteMutation.isPending}
+          >
+            {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+          </Button>
+        </div>
+      </DialogPopup>
+    </Dialog>
+    </>
   )
 }
