@@ -93,57 +93,91 @@ export async function fetchHistoryPage({
 export async function fetchTransactionDetail(
   id: string
 ): Promise<TransactionDetail> {
-  const { data, error } = await supabase
+  const { data: txn, error: txnError } = await supabase
     .from('sales_transactions')
     .select(
       `id, transaction_number, status, cashier_name, department,
        customer_name, delivery_address, delivery_fee,
        discount_type, discount_value, subtotal, final_total,
        payment_method, cash_received, gcash_amount_paid, change_due,
-       completed_at, created_at,
-       sales_service_lines (
-         id, service_name, sort_order,
-         sales_material_entries (
-           quantity, unit_price, material_name
-         )
-       )`
+       completed_at, created_at`
     )
     .eq('id', id)
     .single()
 
-  if (error) throw error
+  if (txnError) throw txnError
 
-  const serviceLines = (data.sales_service_lines ?? [])
-    .sort((a: { sort_order: number }, b: { sort_order: number }) => a.sort_order - b.sort_order)
-    .flatMap((line: { id: string; service_name: string; sales_material_entries: Array<{ quantity: number; unit_price: number; material_name: string | null }> }) =>
-      (line.sales_material_entries ?? []).map((entry) => ({
-        id: line.id,
-        serviceName: line.service_name,
+  const { data: lines, error: linesError } = await supabase
+    .from('sales_service_lines')
+    .select('id, service_name, sort_order, quantity, unit_price')
+    .eq('transaction_id', id)
+    .order('sort_order', { ascending: true })
+
+  if (linesError) throw linesError
+
+  const lineIds = (lines ?? []).map((l) => l.id)
+
+  let entries: Array<{
+    service_line_id: string
+    quantity: number
+    unit_price: number
+    material_name: string | null
+  }> = []
+
+  if (lineIds.length > 0) {
+    const { data: entryRows, error: entriesError } = await supabase
+      .from('sales_material_entries')
+      .select('service_line_id, quantity, unit_price, material_name')
+      .in('service_line_id', lineIds)
+
+    if (entriesError) throw entriesError
+    entries = entryRows ?? []
+  }
+
+  const entriesByLine = new Map<string, typeof entries>()
+  for (const entry of entries) {
+    const arr = entriesByLine.get(entry.service_line_id) ?? []
+    arr.push(entry)
+    entriesByLine.set(entry.service_line_id, arr)
+  }
+
+  const serviceLines = (lines ?? []).map((line) => {
+    const lineEntries = entriesByLine.get(line.id) ?? []
+    const entryQty = lineEntries.length > 0 ? Number(lineEntries[0].quantity) : 1
+    const lineQty = Number(line.quantity)
+    const linePrice = Number(line.unit_price)
+    return {
+      id: line.id,
+      serviceName: line.service_name,
+      quantity: lineQty > 1 ? lineQty : entryQty,
+      unitPrice: linePrice,
+      materials: lineEntries.map((entry) => ({
+        materialName: entry.material_name,
         quantity: Number(entry.quantity),
         unitPrice: Number(entry.unit_price),
-        materialName: entry.material_name,
-      }))
-    )
+      })),
+    }
+  })
 
   return {
-    id: data.id,
-    transactionNumber: String(data.transaction_number),
-    status: data.status as 'completed' | 'cancelled',
-    cashierName: data.cashier_name,
-    department: data.department,
-    customerName: data.customer_name,
-    deliveryAddress: data.delivery_address,
-    deliveryFee: Number(data.delivery_fee),
-    discountType: data.discount_type as 'fixed' | 'percentage' | null,
-    discountValue: data.discount_value != null ? Number(data.discount_value) : null,
-    subtotal: Number(data.subtotal),
-    finalTotal: Number(data.final_total),
-    paymentMethod: data.payment_method as 'cash' | 'gcash' | null,
-    cashReceived: data.cash_received != null ? Number(data.cash_received) : null,
-    gcashAmountPaid: data.gcash_amount_paid != null ? Number(data.gcash_amount_paid) : null,
-    changeDue: data.change_due != null ? Number(data.change_due) : null,
-    completedAt: data.completed_at,
-    createdAt: data.created_at,
+    id: txn.id,
+    transactionNumber: String(txn.transaction_number),
+    status: txn.status as 'completed' | 'cancelled',
+    cashierName: txn.cashier_name,
+    department: txn.department,
+    customerName: txn.customer_name,
+    deliveryAddress: txn.delivery_address,
+    deliveryFee: Number(txn.delivery_fee),
+    discountType: txn.discount_type as 'fixed' | 'percentage' | null,
+    discountValue: txn.discount_value != null ? Number(txn.discount_value) : null,
+    subtotal: Number(txn.subtotal),
+    finalTotal: Number(txn.final_total),
+    paymentMethod: txn.payment_method as 'cash' | 'gcash' | null,
+    cashReceived: txn.cash_received != null ? Number(txn.cash_received) : null,
+    gcashAmountPaid: txn.gcash_amount_paid != null ? Number(txn.gcash_amount_paid) : null,
+    changeDue: txn.change_due != null ? Number(txn.change_due) : null,
+    completedAt: txn.completed_at,
+    createdAt: txn.created_at,
     serviceLines,
   }
 }

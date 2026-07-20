@@ -1,6 +1,6 @@
--- Add quantity and unit_price columns to sales_service_lines
-ALTER TABLE "sales_service_lines" ADD COLUMN IF NOT EXISTS "quantity" DECIMAL(10,2) NOT NULL DEFAULT 1;
-ALTER TABLE "sales_service_lines" ADD COLUMN IF NOT EXISTS "unit_price" DECIMAL(10,2) NOT NULL DEFAULT 0;
+-- AlterTable: add quantity and unit_price to sales_service_lines
+ALTER TABLE "sales_service_lines" ADD COLUMN "quantity" DECIMAL(10,2) NOT NULL DEFAULT 1;
+ALTER TABLE "sales_service_lines" ADD COLUMN "unit_price" DECIMAL(10,2) NOT NULL DEFAULT 0;
 
 -- Backfill quantity from material entries
 UPDATE sales_service_lines ssl
@@ -20,7 +20,7 @@ SET unit_price = COALESCE(
 CREATE OR REPLACE FUNCTION complete_sale(
   p_services JSONB,
   p_delivery_enabled BOOLEAN,
-  p_customer_name TEXT,
+ p_customer_name TEXT,
   p_delivery_address TEXT,
   p_delivery_fee NUMERIC,
   p_discount_type TEXT,
