@@ -176,7 +176,7 @@ export function QuickWalletEntry() {
             <select
               value={showNewCategory ? CATEGORY_SELECT_VALUE : categoryId}
               onChange={(e) => handleCategoryChange(e.target.value)}
-              className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
+              className="h-8 w-full rounded-lg border border-input bg-popover px-2.5 text-sm"
             >
               <option value="">None</option>
               {categories.map((cat) => (

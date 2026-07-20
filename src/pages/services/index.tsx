@@ -245,7 +245,7 @@ function CategoryFormDialog({
             <select
               value={department}
               onChange={(e) => setDepartment(e.target.value)}
-              className="border-input focus-visible:border-ring focus-visible:ring-ring/50 dark:bg-input/30 h-8 rounded-lg border bg-transparent px-2.5 text-sm outline-none focus-visible:ring-3"
+              className="border-input focus-visible:border-ring focus-visible:ring-ring/50 h-8 rounded-lg border bg-popover px-2.5 text-sm outline-none focus-visible:ring-3"
             >
               <option value="physical_dept">Physical</option>
               <option value="design_dept">Design</option>
@@ -531,7 +531,7 @@ function ServiceFormDialog({
             <select
               value={categoryId}
               onChange={(e) => setCategoryId(e.target.value)}
-              className="border-input focus-visible:border-ring focus-visible:ring-ring/50 dark:bg-input/30 h-8 rounded-lg border bg-transparent px-2.5 text-sm outline-none focus-visible:ring-3"
+              className="border-input focus-visible:border-ring focus-visible:ring-ring/50 h-8 rounded-lg border bg-popover px-2.5 text-sm outline-none focus-visible:ring-3"
               required
             >
               <option value="">Select a category</option>

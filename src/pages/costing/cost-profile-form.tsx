@@ -146,7 +146,7 @@ export function CostProfileFormDialog({
             <select
               value={serviceId}
               onChange={(e) => setServiceId(e.target.value)}
-              className="border-input focus-visible:border-ring focus-visible:ring-ring/50 dark:bg-input/30 h-8 rounded-lg border bg-transparent px-2.5 text-sm outline-none focus-visible:ring-3 dark:text-foreground [&>option]:bg-popover [&>option]:text-popover-foreground"
+              className="border-input focus-visible:border-ring focus-visible:ring-ring/50 h-8 rounded-lg border bg-popover px-2.5 text-sm outline-none focus-visible:ring-3"
               required
               disabled={isEdit}
             >
@@ -166,7 +166,7 @@ export function CostProfileFormDialog({
             <select
               value={inventoryItemId}
               onChange={(e) => setInventoryItemId(e.target.value)}
-              className="border-input focus-visible:border-ring focus-visible:ring-ring/50 dark:bg-input/30 h-8 rounded-lg border bg-transparent px-2.5 text-sm outline-none focus-visible:ring-3 dark:text-foreground [&>option]:bg-popover [&>option]:text-popover-foreground"
+              className="border-input focus-visible:border-ring focus-visible:ring-ring/50 h-8 rounded-lg border bg-popover px-2.5 text-sm outline-none focus-visible:ring-3"
               required
               disabled={isEdit}
             >

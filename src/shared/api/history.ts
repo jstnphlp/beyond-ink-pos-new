@@ -4,6 +4,7 @@ import type {
   HistoryPageResult,
   HistoryFilters,
   TransactionDetail,
+  UpdateTransactionPayload,
 } from './history.types'
 
 const PAGE_SIZE = 20
@@ -152,7 +153,7 @@ export async function fetchTransactionDetail(
       quantity: lineQty > 1 ? lineQty : entryQty,
       unitPrice: linePrice,
       materials: lineEntries.map((entry) => ({
-        materialName: entry.material_name,
+        materialName: entry.material_name ?? '',
         quantity: Number(entry.quantity),
         unitPrice: Number(entry.unit_price),
       })),
@@ -180,4 +181,36 @@ export async function fetchTransactionDetail(
     createdAt: txn.created_at,
     serviceLines,
   }
+}
+
+export async function updateTransaction(
+  id: string,
+  payload: UpdateTransactionPayload
+): Promise<void> {
+  const updates: Record<string, unknown> = {}
+
+  if (payload.customerName !== undefined) updates.customer_name = payload.customerName
+  if (payload.deliveryAddress !== undefined) updates.delivery_address = payload.deliveryAddress
+  if (payload.deliveryFee !== undefined) updates.delivery_fee = payload.deliveryFee
+  if (payload.discountType !== undefined) updates.discount_type = payload.discountType
+  if (payload.discountValue !== undefined) updates.discount_value = payload.discountValue
+  if (payload.paymentMethod !== undefined) updates.payment_method = payload.paymentMethod
+  if (payload.status !== undefined) updates.status = payload.status
+
+  updates.updated_at = new Date().toISOString()
+
+  const { error } = await supabase
+    .from('sales_transactions')
+    .update(updates)
+    .eq('id', id)
+
+  if (error) throw error
+}
+
+export async function deleteTransaction(id: string): Promise<void> {
+  const { error } = await supabase.rpc('delete_transaction', {
+    p_transaction_id: id,
+  })
+
+  if (error) throw error
 }
