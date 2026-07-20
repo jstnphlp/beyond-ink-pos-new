@@ -118,23 +118,32 @@ export function TransactionDetail({
               <h4 className="mb-3 text-xs font-semibold uppercase text-muted-foreground">
                 Items
               </h4>
-              <div className="space-y-2">
-                {detail.serviceLines.map((line, i) => (
+              <div className="space-y-3">
+                {detail.serviceLines.map((line) => (
                   <div
-                    key={`${line.id}-${i}`}
-                    className="flex items-center justify-between text-sm"
+                    key={line.id}
+                    className="text-sm"
                   >
-                    <div>
-                      <p className="font-medium">{line.serviceName}</p>
-                      {line.materialName && (
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">{line.serviceName}</p>
                         <p className="text-xs text-muted-foreground">
-                          {line.materialName} × {line.quantity}
+                          × {line.quantity}
                         </p>
-                      )}
+                      </div>
+                      <p className="tabular-nums font-medium">
+                        ₱{(line.unitPrice * line.quantity).toLocaleString()}
+                      </p>
                     </div>
-                    <p className="tabular-nums font-medium">
-                      ₱{(line.unitPrice * line.quantity).toLocaleString()}
-                    </p>
+                    {line.materials.length > 0 && (
+                      <div className="mt-1 space-y-0.5 pl-3">
+                        {line.materials.map((mat, j) => (
+                          <p key={j} className="text-xs text-muted-foreground">
+                            {mat.materialName}
+                          </p>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

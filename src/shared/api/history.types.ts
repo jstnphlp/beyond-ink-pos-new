@@ -26,12 +26,18 @@ export interface HistoryFilters {
   dateTo: string | null
 }
 
+export interface TransactionMaterialEntry {
+  materialName: string
+  quantity: number
+  unitPrice: number
+}
+
 export interface TransactionServiceLine {
   id: string
   serviceName: string
   quantity: number
   unitPrice: number
-  materialName: string | null
+  materials: TransactionMaterialEntry[]
 }
 
 export interface TransactionDetail {
