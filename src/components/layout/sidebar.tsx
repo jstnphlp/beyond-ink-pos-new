@@ -44,7 +44,7 @@ const NAV_ITEMS: NavItem[] = [
     to: '/distributions',
     label: 'Distributions',
     icon: ChartPie,
-    roles: ['owner'],
+    roles: ['owner', 'staff'],
   },
   { to: '/services', label: 'Services', icon: Wrench, roles: ['owner'] },
   {
