@@ -7,6 +7,8 @@ export interface WalletSummary {
   transactionCount: number
   cashEntriesNet: number
   gcashEntriesNet: number
+  cashEntriesAfterOverride: number
+  gcashEntriesAfterOverride: number
   cashOverride: number | null
   gcashOverride: number | null
   cashSalesTotal: number
@@ -61,7 +63,7 @@ export async function fetchWalletSummary(): Promise<WalletSummary> {
       .eq('status', 'completed'),
     supabase
       .from('wallet_entries')
-      .select('type, amount, payment_method'),
+      .select('type, amount, payment_method, created_at'),
     supabase
       .from('wallet_balance_overrides')
       .select('payment_method, amount, updated_at'),
@@ -103,19 +105,30 @@ export async function fetchWalletSummary(): Promise<WalletSummary> {
 
   let cashEntriesNet = 0
   let gcashEntriesNet = 0
+  let cashEntriesAfterOverride = 0
+  let gcashEntriesAfterOverride = 0
 
   for (const row of entriesResult.data ?? []) {
     const amount = Number(row.amount)
     const sign = row.type === 'income' ? 1 : -1
-    if (row.payment_method === 'cash') cashEntriesNet += amount * sign
-    else if (row.payment_method === 'gcash') gcashEntriesNet += amount * sign
+    if (row.payment_method === 'cash') {
+      cashEntriesNet += amount * sign
+      if (cashOverrideData && row.created_at > cashOverrideData.updatedAt) {
+        cashEntriesAfterOverride += amount * sign
+      }
+    } else if (row.payment_method === 'gcash') {
+      gcashEntriesNet += amount * sign
+      if (gcashOverrideData && row.created_at > gcashOverrideData.updatedAt) {
+        gcashEntriesAfterOverride += amount * sign
+      }
+    }
   }
 
   const cashTotal = cashOverride !== null
-    ? cashOverride + cashSalesAfterOverride + cashEntriesNet
+    ? cashOverride + cashSalesAfterOverride + cashEntriesAfterOverride
     : cashSalesTotal + cashEntriesNet
   const gcashTotal = gcashOverride !== null
-    ? gcashOverride + gcashSalesAfterOverride + gcashEntriesNet
+    ? gcashOverride + gcashSalesAfterOverride + gcashEntriesAfterOverride
     : gcashSalesTotal + gcashEntriesNet
 
   return {
@@ -125,6 +138,8 @@ export async function fetchWalletSummary(): Promise<WalletSummary> {
     transactionCount: (salesResult.data ?? []).length,
     cashEntriesNet,
     gcashEntriesNet,
+    cashEntriesAfterOverride,
+    gcashEntriesAfterOverride,
     cashOverride,
     gcashOverride,
     cashSalesTotal,

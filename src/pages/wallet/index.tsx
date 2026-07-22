@@ -909,6 +909,8 @@ export function WalletPage() {
 
   const cashEntriesNet = summary?.cashEntriesNet ?? 0
   const gcashEntriesNet = summary?.gcashEntriesNet ?? 0
+  const cashEntriesAfterOverride = summary?.cashEntriesAfterOverride ?? 0
+  const gcashEntriesAfterOverride = summary?.gcashEntriesAfterOverride ?? 0
   const cashOverride = summary?.cashOverride ?? null
   const gcashOverride = summary?.gcashOverride ?? null
   const cashSalesTotal = summary?.cashSalesTotal ?? 0
@@ -943,7 +945,7 @@ export function WalletPage() {
           computedAmount={cashSalesTotal}
           overrideAmount={cashOverride}
           salesAfterOverride={cashSalesAfterOverride}
-          entriesNet={cashEntriesNet}
+          entriesNet={cashOverride !== null ? cashEntriesAfterOverride : cashEntriesNet}
           onSetOverride={(amount) => setOverride.mutate({ paymentMethod: 'cash', amount, performedBy })}
           onClearOverride={() => clearOverride.mutate({ paymentMethod: 'cash', performedBy })}
           isSaving={setOverride.isPending}
@@ -955,7 +957,7 @@ export function WalletPage() {
           computedAmount={gcashSalesTotal}
           overrideAmount={gcashOverride}
           salesAfterOverride={gcashSalesAfterOverride}
-          entriesNet={gcashEntriesNet}
+          entriesNet={gcashOverride !== null ? gcashEntriesAfterOverride : gcashEntriesNet}
           onSetOverride={(amount) => setOverride.mutate({ paymentMethod: 'gcash', amount, performedBy })}
           onClearOverride={() => clearOverride.mutate({ paymentMethod: 'gcash', performedBy })}
           isSaving={setOverride.isPending}
