@@ -806,9 +806,6 @@ export function DistributionsPage() {
   // Determine which tabs to show
   const tabsToShow = isOwner ? DEPARTMENTS : department ? [department] : []
 
-  // For single-department view (non-owner with no department fallback), skip tabs
-  const showTabs = tabsToShow.length > 1
-
   const defaultTab = tabsToShow[0] === 'physical_dept' ? 'physical'
     : tabsToShow[0] === 'design_dept' ? 'design'
     : 'dev'
