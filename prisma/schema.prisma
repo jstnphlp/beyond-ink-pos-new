@@ -294,7 +294,7 @@ model DistributionPayout {
 
   staffMember StaffMember? @relation(fields: [staffMemberId], references: [id])
 
-  @@unique([department, periodFrom, periodTo])
+  @@unique([staffMemberId, department, periodFrom, periodTo])
   @@index([staffMemberId])
   @@index([periodFrom, periodTo])
   @@index([department])

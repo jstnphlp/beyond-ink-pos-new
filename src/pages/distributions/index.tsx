@@ -253,12 +253,14 @@ function PhysicalStaffTable({
   givenStatus,
   onToggleStaff,
   isToggling,
+  isOwner,
 }: {
   isLoading: boolean
   payouts: PhysicalStaffPayout[]
   givenStatus: Record<string, boolean>
   onToggleStaff: (staffMemberId: string, staffName: string) => void
   isToggling: boolean
+  isOwner: boolean
 }) {
   if (isLoading) {
     return (
@@ -285,7 +287,7 @@ function PhysicalStaffTable({
             <th className="pb-2 pr-4 font-medium">Staff</th>
             <th className="pb-2 pr-4 font-medium text-right">Hours</th>
             <th className="pb-2 pr-4 font-medium text-right">Payout</th>
-            <th className="pb-2 font-medium text-center">Paid</th>
+            {isOwner && <th className="pb-2 font-medium text-center">Paid</th>}
           </tr>
         </thead>
         <tbody className="divide-y divide-border/30">
@@ -300,21 +302,23 @@ function PhysicalStaffTable({
                 <td className="py-2.5 pr-4 text-right font-semibold tabular-nums">
                   {formatCurrency(p.payout)}
                 </td>
-                <td className="py-2.5 text-center">
-                  <button
-                    type="button"
-                    onClick={() => onToggleStaff(p.staffMemberId, p.staffName)}
-                    disabled={isToggling}
-                    className="inline-flex items-center justify-center transition-colors"
-                    title={isPaid ? 'Mark as unpaid' : 'Mark as paid'}
-                  >
-                    {isPaid ? (
-                      <CheckCircle2 className="h-5 w-5 text-emerald-400" />
-                    ) : (
-                      <Circle className="h-5 w-5 text-muted-foreground/40 hover:text-muted-foreground/70" />
-                    )}
-                  </button>
-                </td>
+                {isOwner && (
+                  <td className="py-2.5 text-center">
+                    <button
+                      type="button"
+                      onClick={() => onToggleStaff(p.staffMemberId, p.staffName)}
+                      disabled={isToggling}
+                      className="inline-flex items-center justify-center transition-colors"
+                      title={isPaid ? 'Mark as unpaid' : 'Mark as paid'}
+                    >
+                      {isPaid ? (
+                        <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+                      ) : (
+                        <Circle className="h-5 w-5 text-muted-foreground/40 hover:text-muted-foreground/70" />
+                      )}
+                    </button>
+                  </td>
+                )}
               </tr>
             )
           })}
@@ -330,12 +334,14 @@ function DesignDevStaffTable({
   givenStatus,
   onToggleStaff,
   isToggling,
+  isOwner,
 }: {
   isLoading: boolean
   payouts: DesignDevStaffPayout[]
   givenStatus: Record<string, boolean>
   onToggleStaff: (staffMemberId: string, staffName: string) => void
   isToggling: boolean
+  isOwner: boolean
 }) {
   if (isLoading) {
     return (
@@ -363,7 +369,7 @@ function DesignDevStaffTable({
             <th className="pb-2 pr-4 font-medium text-right">Transactions</th>
             <th className="pb-2 pr-4 font-medium text-right">Share %</th>
             <th className="pb-2 pr-4 font-medium text-right">Payout</th>
-            <th className="pb-2 font-medium text-center">Paid</th>
+            {isOwner && <th className="pb-2 font-medium text-center">Paid</th>}
           </tr>
         </thead>
         <tbody className="divide-y divide-border/30">
@@ -381,21 +387,23 @@ function DesignDevStaffTable({
                 <td className="py-2.5 pr-4 text-right font-semibold tabular-nums">
                   {formatCurrency(p.payout)}
                 </td>
-                <td className="py-2.5 text-center">
-                  <button
-                    type="button"
-                    onClick={() => onToggleStaff(p.staffMemberId, p.staffName)}
-                    disabled={isToggling}
-                    className="inline-flex items-center justify-center transition-colors"
-                    title={isPaid ? 'Mark as unpaid' : 'Mark as paid'}
-                  >
-                    {isPaid ? (
-                      <CheckCircle2 className="h-5 w-5 text-emerald-400" />
-                    ) : (
-                      <Circle className="h-5 w-5 text-muted-foreground/40 hover:text-muted-foreground/70" />
-                    )}
-                  </button>
-                </td>
+                {isOwner && (
+                  <td className="py-2.5 text-center">
+                    <button
+                      type="button"
+                      onClick={() => onToggleStaff(p.staffMemberId, p.staffName)}
+                      disabled={isToggling}
+                      className="inline-flex items-center justify-center transition-colors"
+                      title={isPaid ? 'Mark as unpaid' : 'Mark as paid'}
+                    >
+                      {isPaid ? (
+                        <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+                      ) : (
+                        <Circle className="h-5 w-5 text-muted-foreground/40 hover:text-muted-foreground/70" />
+                      )}
+                    </button>
+                  </td>
+                )}
               </tr>
             )
           })}
@@ -412,11 +420,13 @@ function PhysicalPanel({
   givenStatus,
   onToggleStaff,
   isToggling,
+  isOwner,
 }: {
   period: DistributionPeriod
   givenStatus: Record<string, boolean>
   onToggleStaff: (staffMemberId: string, staffName: string) => void
   isToggling: boolean
+  isOwner: boolean
 }) {
   const { data, isLoading } = usePhysicalDistribution(period)
   const payouts = (data?.staffPayouts as PhysicalStaffPayout[]) ?? []
@@ -446,6 +456,7 @@ function PhysicalPanel({
             givenStatus={givenStatus}
             onToggleStaff={onToggleStaff}
             isToggling={isToggling}
+            isOwner={isOwner}
           />
         </CardContent>
       </Card>
@@ -458,11 +469,13 @@ function DesignPanel({
   givenStatus,
   onToggleStaff,
   isToggling,
+  isOwner,
 }: {
   period: DistributionPeriod
   givenStatus: Record<string, boolean>
   onToggleStaff: (staffMemberId: string, staffName: string) => void
   isToggling: boolean
+  isOwner: boolean
 }) {
   const { data, isLoading } = useDesignDistribution(period)
   const payouts = (data?.staffPayouts as DesignDevStaffPayout[]) ?? []
@@ -490,6 +503,7 @@ function DesignPanel({
             givenStatus={givenStatus}
             onToggleStaff={onToggleStaff}
             isToggling={isToggling}
+            isOwner={isOwner}
           />
         </CardContent>
       </Card>
@@ -502,11 +516,13 @@ function DevPanel({
   givenStatus,
   onToggleStaff,
   isToggling,
+  isOwner,
 }: {
   period: DistributionPeriod
   givenStatus: Record<string, boolean>
   onToggleStaff: (staffMemberId: string, staffName: string) => void
   isToggling: boolean
+  isOwner: boolean
 }) {
   const { data, isLoading } = useDevDistribution(period)
   const payouts = (data?.staffPayouts as DesignDevStaffPayout[]) ?? []
@@ -534,6 +550,7 @@ function DevPanel({
             givenStatus={givenStatus}
             onToggleStaff={onToggleStaff}
             isToggling={isToggling}
+            isOwner={isOwner}
           />
         </CardContent>
       </Card>
@@ -668,7 +685,7 @@ export function DistributionsPage() {
   const markStaffGiven = useMarkStaffGiven()
 
   // Staff: look up their staff_member_id
-  const { data: currentStaffMember } = useCurrentStaffMember(user?.email)
+  const { data: currentStaffMember, isLoading: staffLoading } = useCurrentStaffMember(user?.email)
 
   function getDeptGivenStatus(week: WeekEntry, dept: string): Record<string, boolean> {
     const weekKey = `${new Date(week.periodFrom).getTime()}|${new Date(week.periodTo).getTime()}`
@@ -700,6 +717,22 @@ export function DistributionsPage() {
   }
 
   // Staff view: simplified — must be clocked in to see distributions
+  if (!isOwner && staffLoading) {
+    return (
+      <div className="space-y-6 p-4 md:p-6">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Distributions</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Loading…</p>
+        </div>
+        <Card className="border-border/50">
+          <CardContent className="p-8">
+            <Skeleton className="h-16 w-full" />
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   if (!isOwner && currentStaffMember) {
     const { data: activeSession, isLoading: sessionLoading } = useActiveStaffSession(currentStaffMember.id)
 
@@ -802,6 +835,27 @@ export function DistributionsPage() {
     )
   }
 
+  // Non-owners without a staff member record — block access to the full view
+  if (!isOwner) {
+    return (
+      <div className="space-y-6 p-4 md:p-6">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Distributions</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Your weekly payout information.
+          </p>
+        </div>
+        <Card className="border-border/50">
+          <CardContent className="p-8 text-center">
+            <p className="text-sm text-muted-foreground">
+              No staff record found. Contact an owner if you believe this is an error.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   // Owner view: full page with tabs and per-staff paid toggles
   // Determine which tabs to show
   const tabsToShow = isOwner ? DEPARTMENTS : department ? [department] : []
@@ -900,6 +954,7 @@ export function DistributionsPage() {
               givenStatus={getDeptGivenStatus(selectedWeek, 'physical_dept')}
               onToggleStaff={(id, name) => handleToggleStaff('physical_dept', id, name)}
               isToggling={markStaffGiven.isPending}
+              isOwner={isOwner}
             />
           </TabsContent>
         )}
@@ -910,6 +965,7 @@ export function DistributionsPage() {
               givenStatus={getDeptGivenStatus(selectedWeek, 'design_dept')}
               onToggleStaff={(id, name) => handleToggleStaff('design_dept', id, name)}
               isToggling={markStaffGiven.isPending}
+              isOwner={isOwner}
             />
           </TabsContent>
         )}
@@ -920,6 +976,7 @@ export function DistributionsPage() {
               givenStatus={getDeptGivenStatus(selectedWeek, 'dev_dept')}
               onToggleStaff={(id, name) => handleToggleStaff('dev_dept', id, name)}
               isToggling={markStaffGiven.isPending}
+              isOwner={isOwner}
             />
           </TabsContent>
         )}
