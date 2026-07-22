@@ -182,7 +182,7 @@ export async function getDesignDevDistribution(
 
 export async function getAllWeekGivenStatuses(
   weeks: { periodFrom: string; periodTo: string }[],
-): Promise<Record<string, Record<string, boolean>>> {
+): Promise<Record<string, Record<string, Record<string, boolean>>>> {
   if (weeks.length === 0) return {}
 
   const allFroms = weeks.map((w) => w.periodFrom)
@@ -192,13 +192,14 @@ export async function getAllWeekGivenStatuses(
 
   const { data, error } = await supabase
     .from('distribution_payouts')
-    .select('department, period_from, period_to, given')
+    .select('staff_member_id, department, period_from, period_to, given')
     .gte('period_from', minFrom)
     .lte('period_to', maxTo)
 
   if (error) throw error
 
-  const result: Record<string, Record<string, boolean>> = {}
+  // Result: weekKey -> department -> staffMemberId -> given
+  const result: Record<string, Record<string, Record<string, boolean>>> = {}
   for (const week of weeks) {
     const key = `${new Date(week.periodFrom).getTime()}|${new Date(week.periodTo).getTime()}`
     result[key] = {}
@@ -208,24 +209,30 @@ export async function getAllWeekGivenStatuses(
     if (!row.given) continue
     const key = `${new Date(row.period_from).getTime()}|${new Date(row.period_to).getTime()}`
     if (result[key]) {
-      result[key][row.department] = true
+      if (!result[key][row.department]) {
+        result[key][row.department] = {}
+      }
+      result[key][row.department][row.staff_member_id] = true
     }
   }
 
   return result
 }
 
-export async function markWeekGiven(params: {
+export async function markStaffGiven(params: {
+  staffMemberId: string
+  staffName: string
   department: string
   periodFrom: string
   periodTo: string
   given: boolean
 }): Promise<void> {
-  const { department, periodFrom, periodTo, given } = params
+  const { staffMemberId, staffName, department, periodFrom, periodTo, given } = params
 
   const { data: existing } = await supabase
     .from('distribution_payouts')
     .select('id')
+    .eq('staff_member_id', staffMemberId)
     .eq('department', department)
     .eq('period_from', periodFrom)
     .eq('period_to', periodTo)
@@ -235,6 +242,7 @@ export async function markWeekGiven(params: {
     const { error } = await supabase
       .from('distribution_payouts')
       .update({ given, given_at: given ? new Date().toISOString() : null })
+      .eq('staff_member_id', staffMemberId)
       .eq('department', department)
       .eq('period_from', periodFrom)
       .eq('period_to', periodTo)
@@ -243,6 +251,8 @@ export async function markWeekGiven(params: {
     const { error } = await supabase
       .from('distribution_payouts')
       .insert({
+        staff_member_id: staffMemberId,
+        staff_name: staffName,
         department,
         period_from: periodFrom,
         period_to: periodTo,

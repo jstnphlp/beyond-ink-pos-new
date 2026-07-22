@@ -4,7 +4,7 @@ import {
   getPhysicalDistribution,
   getDesignDevDistribution,
   getAllWeekGivenStatuses,
-  markWeekGiven,
+  markStaffGiven,
 } from '@/shared/api/distributions'
 import type { DistributionPeriod } from '@/shared/api/distributions.types'
 
@@ -53,11 +53,11 @@ export function useAllWeekGivenStatuses(weeks: { periodFrom: string; periodTo: s
   })
 }
 
-export function useMarkWeekGiven() {
+export function useMarkStaffGiven() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: markWeekGiven,
+    mutationFn: markStaffGiven,
     onMutate: async (variables) => {
       await queryClient.cancelQueries({ queryKey: distributionKeys.all })
 
@@ -65,14 +65,18 @@ export function useMarkWeekGiven() {
 
       queryClient.setQueriesData(
         { queryKey: ['distributions', 'all-week-statuses'] },
-        (old: Record<string, Record<string, boolean>> | undefined) => {
+        (old: Record<string, Record<string, Record<string, boolean>>> | undefined) => {
           if (!old) return old
           const updated = { ...old }
-          for (const key of Object.keys(updated)) {
-            if (updated[key] && variables.department in updated[key]) {
-              updated[key] = {
-                ...updated[key],
-                [variables.department]: variables.given,
+          for (const weekKey of Object.keys(updated)) {
+            const weekData = updated[weekKey]
+            if (weekData && weekData[variables.department]) {
+              updated[weekKey] = {
+                ...weekData,
+                [variables.department]: {
+                  ...weekData[variables.department],
+                  [variables.staffMemberId]: variables.given,
+                },
               }
             }
           }
